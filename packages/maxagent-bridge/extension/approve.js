@@ -9,8 +9,6 @@ const T = RU ? {
   actionTitle: "Подтвердите действие агента",
   actionText: (r) => `<span class="who">${r.agent}</span>: ${r.tool}${r.site ? ` на ${r.site}` : ""}`,
   allow: "Разрешить", deny: "Запретить",
-  once: "Разрешить", page: "Разрешить для этой страницы", site: (h) => `Разрешить для сайта ${h}`,
-  scriptsWarn: "Агент выполнит свой код на странице: он видит и делает всё на ней. «Для страницы» — без вопросов на этой странице до закрытия браузера, «для сайта» — всегда на этом сайте (убрать — в окне расширения). Где разрешаете без вопроса — не храните в этом браузере критические доступы: банк, платёжные карты, главная почта, пароли.",
 } : {
   pairTitle: "An agent asks for browser access",
   pairText: (a) => `<span class="who">${a}</span> wants to work in this browser: see tabs and pages and, if you allow, click and type. Your sign-ins stay yours.`,
@@ -21,8 +19,6 @@ const T = RU ? {
   actionTitle: "Confirm the agent's action",
   actionText: (r) => `<span class="who">${r.agent}</span>: ${r.tool}${r.site ? ` on ${r.site}` : ""}`,
   allow: "Allow", deny: "Deny",
-  once: "Allow", page: "Allow for this page", site: (h) => `Allow for site ${h}`,
-  scriptsWarn: "The agent will run its own code in the page: it sees and does anything there. \"For this page\" — no questions on this page until the browser closes, \"for site\" — always on this site (remove in the extension popup). Where you allow without asking, do not keep critical access in this browser: bank, payment cards, main email, passwords.",
 };
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -45,19 +41,7 @@ const id = new URLSearchParams(location.search).get("id");
   } else {
     title.textContent = T.actionTitle;
     body.innerHTML = `<p>${T.actionText({ agent: esc(req.agent), tool: esc(req.tool), site: esc(req.site || "") })}</p>
-      ${req.detail ? `<div class="detail">${esc(req.detail)}</div>` : ""}<p class="warn">${req.tool === "evaluate" ? T.scriptsWarn : T.warn}</p>`;
-    // Page scripts come in long series (a voice-over polls every few seconds): three ways to allow, one to deny.
-    if (req.tool === "evaluate") {
-      document.getElementById("allow").textContent = T.once;
-      let last = document.getElementById("allow");
-      for (const [scope, label] of [["page", T.page], ["site", req.site ? T.site(req.site) : ""]]) {
-        if (!label) continue;
-        const b = document.createElement("button");
-        b.textContent = label;
-        b.onclick = () => chrome.runtime.sendMessage({ type: "decision", id, answer: { allow: true, scope } });
-        last.after(b); last = b;
-      }
-    }
+      ${req.detail ? `<div class="detail">${esc(req.detail)}</div>` : ""}<p class="warn">${T.warn}</p>`;
   }
   const answer = (allow) => {
     const rights = req.kind === "pair" ? document.querySelector('input[name="r"]:checked').value : undefined;

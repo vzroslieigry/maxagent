@@ -10,13 +10,10 @@
   ];
 
   const READ_TOOLS = new Set(["browser_status", "tabs_list", "snapshot", "screenshot", "read", "scroll"]);
-  const ACT_TOOLS = new Set(["tab_open", "tab_close", "tab_activate", "navigate", "click", "type", "press_key", "upload", "record_tab_start", "record_tab_stop", "evaluate"]);
+  const ACT_TOOLS = new Set(["tab_open", "tab_close", "tab_activate", "navigate", "click", "type", "press_key", "upload", "record_tab_start", "record_tab_stop"]);
   const ALWAYS_CONFIRM = new Set(["upload"]);
-  // Runs the agent's own code inside the page (any site not blocked: mail, shops…). Asked every time unless the
-  // owner switched on "allow scripts" in the popup (off by default).
-  const OWNER_GATED = new Set(["evaluate"]);
   // Tools that touch the page content of a given tab (blocklist is checked against the tab URL).
-  const TAB_CONTENT_TOOLS = new Set(["snapshot", "screenshot", "read", "click", "type", "press_key", "scroll", "upload", "navigate", "record_tab_start", "record_tab_stop", "evaluate"]);
+  const TAB_CONTENT_TOOLS = new Set(["snapshot", "screenshot", "read", "click", "type", "press_key", "scroll", "upload", "navigate", "record_tab_start", "record_tab_stop"]);
 
   const globToRe = (glob) => new RegExp("^" + String(glob).trim().toLowerCase().replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*") + "$");
 
@@ -41,30 +38,15 @@
   }
 
   /**
-   * rights: "read" | "act" | "confirm"; opts.scripts: the owner allowed page scripts (evaluate) without asking
+   * rights: "read" | "act" | "confirm"
    * returns { allow: bool, confirm: bool, reason? }
    */
-  function decide(tool, rights, opts = {}) {
+  function decide(tool, rights) {
     if (READ_TOOLS.has(tool)) return { allow: true, confirm: false };
     if (!ACT_TOOLS.has(tool)) return { allow: false, reason: `unknown_tool: ${tool}` };
     if (rights === "read") return { allow: false, reason: "read_only_agent: the owner allowed this agent only to read pages" };
     if (rights !== "act" && rights !== "confirm") return { allow: false, reason: "agent_not_approved" };
-    return { allow: true, confirm: rights === "confirm" || ALWAYS_CONFIRM.has(tool) || (OWNER_GATED.has(tool) && !opts.scripts) };
-  }
-
-  /** A page = its URL without the #fragment (a single-page app changing only the hash stays the same page). */
-  function pageKey(url) {
-    try { const u = new URL(String(url)); u.hash = ""; return u.href; } catch { return null; }
-  }
-
-  /**
-   * Page scripts without asking: the owner chose "for this site" (sites: hosts, kept) or "for this page"
-   * (pages: pageKey list, until the browser closes). Exact host — "mail.example.com" does not cover "example.com".
-   */
-  function scriptsAllowed(url, sites, pages) {
-    const host = hostOf(url);
-    if (!host) return false;
-    return (sites || []).includes(host) || (pages || []).includes(pageKey(url));
+    return { allow: true, confirm: rights === "confirm" || ALWAYS_CONFIRM.has(tool) };
   }
 
   /** Project chunk size: Native Messaging allows 64 MiB Chrome→host and 1 MiB host→Chrome. */
@@ -77,7 +59,7 @@
     return out;
   }
 
-  const api = { DEFAULT_BLOCKLIST, READ_TOOLS, ACT_TOOLS, TAB_CONTENT_TOOLS, OWNER_GATED, urlDenied, pageKey, scriptsAllowed, decide, chunks, hostOf };
+  const api = { DEFAULT_BLOCKLIST, READ_TOOLS, ACT_TOOLS, TAB_CONTENT_TOOLS, urlDenied, decide, chunks, hostOf };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.maxagentPolicy = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

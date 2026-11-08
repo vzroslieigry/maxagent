@@ -26,14 +26,13 @@ check(P.decide('click', 'act').allow && !P.decide('click', 'act').confirm, 'poli
 check(P.decide('click', 'confirm').confirm, 'policy: confirm agent → confirmation');
 check(P.decide('upload', 'act').confirm, 'policy: upload always confirmed');
 check(!P.decide('evaluate_js', 'act').allow, 'policy: unknown tool refused');
-check(P.decide('evaluate', 'act').allow && P.decide('evaluate', 'act').confirm, 'policy: page script → the owner is asked by default');
-check(!P.decide('evaluate', 'act', { scripts: true }).confirm, 'policy: page script without asking only when the owner switched it on');
-check(!P.decide('evaluate', 'read', { scripts: true }).allow, 'policy: read-only agent never runs page scripts');
-check(P.decide('evaluate', 'confirm', { scripts: true }).confirm, 'policy: "confirm" agent is asked even with scripts on');
-check(P.scriptsAllowed('https://elevenreader.io/reader/x', ['elevenreader.io'], []), 'scripts: "for this site" covers every page of the site');
-check(!P.scriptsAllowed('https://evil.elevenreader.io.example.com/', ['elevenreader.io'], []) && !P.scriptsAllowed('https://mail.example.com/', ['example.com'], []), 'scripts: site match is the exact host');
-check(P.scriptsAllowed('https://a.com/p?q=1#top', [], [P.pageKey('https://a.com/p?q=1')]) && !P.scriptsAllowed('https://a.com/other', [], [P.pageKey('https://a.com/p?q=1')]), 'scripts: "for this page" — same page (hash ignored), not the rest of the site');
-check(!P.scriptsAllowed('chrome://settings', ['settings'], []), 'scripts: never on non-web pages');
+check(!P.decide('evaluate', 'act').allow && !require('../lib/tools').TOOLS.some((t) => t.name === 'evaluate'), "no tool runs the agent's own code in a page (owner's rule 08.11.2026)");
+{
+  const drv = fs.readFileSync(path.join(__dirname, '..', 'extension', 'driver.js'), 'utf8');
+  const sw = fs.readFileSync(path.join(__dirname, '..', 'extension', 'sw.js'), 'utf8');
+  check(!/globalThis\[|window\.__|__maxagent/.test(drv) && /createIsolatedWorld/.test(drv) && /contextId: executionContextId/.test(drv), 'page operations: isolated world, no variables left in the page');
+  check(!/AudioNode\.prototype|captureStream|userGesture/.test(sw), 'tab audio: no hooks inside the page, only Chrome tab capture');
+}
 check(P.decide('record_tab_start', 'act').allow && !P.decide('record_tab_start', 'read').allow, 'policy: recording tab audio needs an act agent');
 {
   const { saveRecording } = require('../lib/mcp');

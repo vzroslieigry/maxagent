@@ -7,7 +7,7 @@ const HOST = "com.maxagent.bridge";
 // Версия КОДА (не манифеста): по ней установщик видит, что Chrome действительно загрузил новый скрипт.
 // Chrome после перезапуска перечитывает манифест, но может держать старый код фонового скрипта из кэша (05.11.2026).
 // Поднимать вместе с "version" в manifest.json.
-const CODE_VERSION = "0.1.9";
+const CODE_VERSION = "0.2.2";
 const P = globalThis.maxagentPolicy;
 const D = globalThis.maxagentDriver;
 const LOG_MAX = 300;
@@ -15,7 +15,6 @@ const LOG_MAX = 300;
 let port = null;
 let hostState = { connected: false, error: null };
 const sessions = new Map();   // conn → { agent, rights }
-const snapshots = new Map();  // `${tabId}:${snapshotId}` → documentId
 const decisions = new Map();  // request id → resolve (approval windows)
 
 /* ---------- storage ---------- */
@@ -148,7 +147,7 @@ async function onCall({ conn, id, tool, args }) {
       return reply(true, { connected: true, rights: s.rights, stopped: await store.get("stopped", false), extensionVersion: chrome.runtime.getManifest().version });
     }
     if (await store.get("stopped", false)) throw new Error("bridge_stopped_by_owner");
-    let d = P.decide(tool, s.rights);
+    const d = P.decide(tool, s.rights);
     if (!d.allow) throw new Error(d.reason);
     const bl = await blocklist();
     let tab = null;
@@ -162,14 +161,9 @@ async function onCall({ conn, id, tool, args }) {
       if (why) throw new Error(why);
       entry.to = P.hostOf(args.url);
     }
-    // Page scripts: no question where the owner allowed this page or this site.
-    if (P.OWNER_GATED.has(tool) && tab) d = P.decide(tool, s.rights, { scripts: P.scriptsAllowed(tab.url, await store.get("scriptSites", []), await scriptPages()) });
     if (d.confirm) {
-      const answer = await askOwner({ kind: "action", agent: s.agent, tool, site: entry.site || entry.to || "", page: tab ? P.pageKey(tab.url) : "", detail: describeAction(tool, args) });
+      const answer = await askOwner({ kind: "action", agent: s.agent, tool, site: entry.site || entry.to || "", detail: describeAction(tool, args) });
       if (!answer.allow) throw new Error("owner_denied_this_action");
-      // Only the owner's click in approve.html sets these — no agent call can; the popup lists and removes them.
-      if (P.OWNER_GATED.has(tool) && tab && answer.scope === "site" && entry.site) await store.set("scriptSites", [...new Set([...(await store.get("scriptSites", [])), entry.site])]);
-      if (P.OWNER_GATED.has(tool) && tab && answer.scope === "page") await chrome.storage.session.set({ scriptPages: [...new Set([...(await scriptPages()), P.pageKey(tab.url)])] });
     }
     const result = await run(tool, args, tab, bl);
     await log({ ...entry, ok: true });
@@ -184,96 +178,47 @@ function describeAction(tool, args) {
   if (tool === "type") return `text, ${String(args.text || "").length} characters`;
   if (tool === "upload") return `files: ${(args.files || []).map((f) => String(f).split(/[\\/]/).pop()).join(", ")}`;
   if (tool === "navigate" || tool === "tab_open") return String(args.url || "");
-  if (tool === "evaluate") { const x = String(args.expression || ""); return `script: ${x.slice(0, 300)}${x.length > 300 ? "…" : ""}`; }
   return args.elementId ? `element ${args.elementId}` : "";
 }
 
-const docFor = (tabId, snapshotId) => {
-  const doc = snapshots.get(`${tabId}:${snapshotId}`);
-  if (!doc) throw new Error("unknown_snapshot_take_a_new_one");
-  return doc;
-};
+// Snapshots live in the extension, not in the page: documentId, capture time and each element's signature.
+// chrome.storage.session — the service worker sleeps after ~30 s idle and would forget a Map.
+const SNAP_TTL = 120000;
+async function snapRecord(tabId, snapshotId) {
+  const key = `snap:${tabId}:${snapshotId}`;
+  const rec = (await chrome.storage.session.get(key))[key];
+  if (!rec) throw new Error("unknown_snapshot_take_a_new_one");
+  if (Date.now() - rec.at > SNAP_TTL) throw new Error("snapshot_expired_take_a_new_one");
+  return rec;
+}
+async function elementRef(tabId, args) {
+  const rec = await snapRecord(tabId, args.snapshotId);
+  const signature = rec.sigs[args.elementId];
+  if (!signature) throw new Error("unknown_element_take_a_new_snapshot");
+  return { documentId: rec.doc, elementId: args.elementId, signature };
+}
 
 async function snapshot(tab, args) {
   return D.withDebugger(tab.id, async (target) => {
-    const page = await D.evaluate(target, { action: "inspect", maxElements: args.maxElements, maxText: args.maxText });
-    snapshots.set(`${tab.id}:${page.snapshotId}`, page.documentId);
-    if (snapshots.size > 200) snapshots.delete(snapshots.keys().next().value);
-    const { documentId, ...rest } = page;
-    return { tabId: tab.id, ...rest };
+    const { documentId, signatures, ...page } = await D.evaluate(target, { action: "inspect", maxElements: args.maxElements, maxText: args.maxText });
+    const snapshotId = crypto.randomUUID();
+    const at = Date.now();
+    const all = await chrome.storage.session.get(null);
+    const old = Object.keys(all).filter((k) => k.startsWith("snap:") && at - all[k].at > SNAP_TTL);
+    if (old.length) await chrome.storage.session.remove(old);
+    await chrome.storage.session.set({ [`snap:${tab.id}:${snapshotId}`]: { doc: documentId, at, sigs: signatures } });
+    return { tabId: tab.id, snapshotId, capturedAt: new Date(at).toISOString(), ...page };
   });
 }
 
-/* ---------- tab audio inside the page (no activeTab needed) ---------- */
+/* ---------- tab audio: Chrome's own tab capture only ---------- */
 
-// tabId → "tab" | "page". In chrome.storage.session: the service worker sleeps after ~30 s idle and a Map would
-// forget a recording in the middle of a long voice-over.
+// tabId → true while recording. In chrome.storage.session: the service worker sleeps after ~30 s idle.
 const recordings = {
   async get(id) { return (await chrome.storage.session.get("rec"))?.rec?.[id]; },
-  async set(id, mode) { const o = (await chrome.storage.session.get("rec")).rec || {}; o[id] = mode; await chrome.storage.session.set({ rec: o }); },
+  async set(id) { const o = (await chrome.storage.session.get("rec")).rec || {}; o[id] = true; await chrome.storage.session.set({ rec: o }); },
   async delete(id) { const o = (await chrome.storage.session.get("rec")).rec || {}; delete o[id]; await chrome.storage.session.set({ rec: o }); },
 };
-
-// Fixed code of the bridge itself (not the agent's): mixes every <audio>/<video> (captureStream) and every Web
-// Audio graph that reaches its speakers into one stream and records it as WebM/Opus.
-const PAGE_REC_START = `(async () => {
-  if (window.__maxagentRec) return { recording: true, mode: "page", already: true };
-  const mix = new AudioContext();
-  await mix.resume().catch(() => {});
-  const dest = mix.createMediaStreamDestination();
-  const st = { mix, dest, chunks: [], seen: new WeakSet(), taps: new WeakMap(), sources: 0 };
-  const add = (stream) => {
-    if (!stream) return;
-    const plug = () => { if (stream.__maxagentPlugged || !stream.getAudioTracks().length) return; stream.__maxagentPlugged = true; mix.createMediaStreamSource(stream).connect(dest); st.sources++; };
-    plug(); stream.addEventListener("addtrack", plug);
-  };
-  const scan = () => document.querySelectorAll("audio,video").forEach((el) => {
-    if (st.seen.has(el)) return; st.seen.add(el);
-    try { add(el.captureStream ? el.captureStream() : el.mozCaptureStream()); } catch (e) { /* cross-origin media without CORS cannot be captured */ }
-  });
-  scan(); st.timer = setInterval(scan, 500);
-  st.orig = AudioNode.prototype.connect;
-  const orig = st.orig;
-  AudioNode.prototype.connect = function (d, ...a) {
-    try {
-      if (d && d === this.context.destination && this.context !== mix) {
-        let t = st.taps.get(this.context);
-        if (!t) { t = this.context.createMediaStreamDestination(); st.taps.set(this.context, t); add(t.stream); }
-        orig.call(this, t, ...a);
-      }
-    } catch (e) { /* never break the page */ }
-    return orig.call(this, d, ...a);
-  };
-  const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm";
-  st.rec = new MediaRecorder(dest.stream, { mimeType: mime });
-  st.rec.ondataavailable = (e) => { if (e.data && e.data.size) st.chunks.push(e.data); };
-  st.rec.start(250);
-  window.__maxagentRec = st;
-  return { recording: true, mode: "page", mediaElements: document.querySelectorAll("audio,video").length, sources: st.sources, mixState: mix.state };
-})()`;
-
-const PAGE_REC_STOP = `(async () => {
-  const st = window.__maxagentRec;
-  if (!st) return { error: "not_recording_in_page" };
-  clearInterval(st.timer);
-  AudioNode.prototype.connect = st.orig;
-  await new Promise((r) => { st.rec.onstop = r; st.rec.stop(); });
-  const blob = new Blob(st.chunks, { type: st.rec.mimeType });
-  const base64 = await new Promise((r) => { const f = new FileReader(); f.onloadend = () => r(String(f.result).split(",")[1] || ""); f.readAsDataURL(blob); });
-  st.mix.close().catch(() => {});
-  delete window.__maxagentRec;
-  return { mode: "page", base64, size: blob.size, mimeType: blob.type, sources: st.sources };
-})()`;
-
-// userGesture: our own AudioContext may start "suspended" under the autoplay policy; a gesture lets it resume.
-function pageEval(tabId, expression) {
-  return D.withDebugger(tabId, async (target) => {
-    const r = await chrome.debugger.sendCommand(target, "Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true, userGesture: true });
-    if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text || "page_recorder_failed");
-    if (r.result?.value?.error) throw new Error(r.result.value.error);
-    return r.result?.value;
-  });
-}
 
 async function ensureOffscreen() {
   const contexts = await chrome.runtime.getContexts({ contextTypes: ["OFFSCREEN_DOCUMENT"] });
@@ -296,43 +241,29 @@ async function run(tool, args, tab, bl) {
   switch (tool) {
     case "record_tab_start": {
       if (await recordings.get(tab.id)) throw new Error("already_recording_this_tab");
-      // tabCapture needs the owner to have clicked the extension icon on this tab (activeTab) — an agent alone
-      // gets "Extension has not been invoked for the current page" (live check 08.11.2026). Then: record inside
-      // the page (media elements + Web Audio), which needs no gesture.
+      // Recorded by the browser, the page sees nothing. Chrome allows it only after the owner clicked the
+      // extension icon on this tab (once; it lasts until the tab closes or leaves the site).
+      let streamId;
       try {
-        const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
-        await ensureOffscreen();
-        const resp = await chrome.runtime.sendMessage({ target: "offscreen", type: "START_RECORDING", streamId, mute: Boolean(args.mute) });
-        if (!resp || !resp.ok) throw new Error(resp?.error || "failed_to_start_recording");
-        await recordings.set(tab.id, "tab");
-        return { recording: true, tabId: tab.id, mode: "tab", ...resp.res };
+        streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
       } catch (e) {
-        if (!/activeTab|invoked|cannot be captured|gesture/i.test(String(e.message || e))) throw e;
+        if (/activeTab|invoked|cannot be captured|gesture/i.test(String(e.message || e))) throw new Error("owner_click_needed: ask the owner to click the maxagent bridge icon on this tab once (Chrome allows tab audio only after that), then call record_tab_start again");
+        throw e;
       }
-      const res = await pageEval(tab.id, PAGE_REC_START);
-      await recordings.set(tab.id, "page");
-      return { tabId: tab.id, ...res, note: "recording inside the page: start it BEFORE playback; audio already playing through Web Audio is caught from the next connect" };
+      await ensureOffscreen();
+      const resp = await chrome.runtime.sendMessage({ target: "offscreen", type: "START_RECORDING", streamId, mute: Boolean(args.mute) });
+      if (!resp || !resp.ok) throw new Error(resp?.error || "failed_to_start_recording");
+      await recordings.set(tab.id);
+      return { recording: true, tabId: tab.id, ...resp.res };
     }
     case "record_tab_stop": {
-      const mode = await recordings.get(tab.id);
-      if (!mode) throw new Error("not_recording_this_tab");
+      if (!(await recordings.get(tab.id))) throw new Error("not_recording_this_tab");
       await recordings.delete(tab.id);
-      if (mode === "page") return { tabId: tab.id, ...(await pageEval(tab.id, PAGE_REC_STOP)) };
       const resp = await chrome.runtime.sendMessage({ target: "offscreen", type: "STOP_RECORDING" });
       await closeOffscreen();
       if (!resp || !resp.ok) throw new Error(resp?.error || "failed_to_stop_recording");
-      return { tabId: tab.id, mode: "tab", ...resp.data };
+      return { tabId: tab.id, ...resp.data };
     }
-    case "evaluate":
-      return D.withDebugger(tab.id, async (target) => {
-        const r = await chrome.debugger.sendCommand(target, "Runtime.evaluate", {
-          expression: String(args.expression),
-          returnByValue: true,
-          awaitPromise: true
-        });
-        if (r.exceptionDetails) throw new Error(r.exceptionDetails.text || r.exceptionDetails.exception?.description || "eval_failed");
-        return r.result?.value;
-      });
     case "tabs_list":
       return Promise.all((await chrome.tabs.query({})).map((t) => tabMeta(t, bl)));
     case "tab_open": {
@@ -375,7 +306,7 @@ async function pageAction(tool, args, tab) {
   const background = !tab.active || win.state === "minimized";
   if (background && (tool === "press_key" || tool === "upload")) throw new Error(`${tool}_needs_a_visible_tab: call tab_activate first (this brings the tab to the owner's screen)`);
   if (background && (tool === "click" || tool === "type")) {
-    const base = { documentId: docFor(tab.id, args.snapshotId), snapshotId: args.snapshotId, elementId: args.elementId };
+    const base = await elementRef(tab.id, args);
     const prepared = await D.withDebugger(tab.id, (target) => D.evaluate(target, { ...base, action: tool === "click" ? "dom_click" : "dom_fill", text: args.text, clear: args.clear }));
     await new Promise((r) => setTimeout(r, 300));
     const after = await chrome.tabs.get(tab.id);
@@ -386,10 +317,10 @@ async function pageAction(tool, args, tab) {
     return { pressed: true };
   }
   if (tool === "scroll" && !args.elementId) {
-    await D.withDebugger(tab.id, (target) => chrome.debugger.sendCommand(target, "Runtime.evaluate", { expression: `scrollBy(${Number(args.x) || 0}, ${Number(args.y) || 0})` }));
+    await D.withDebugger(tab.id, (target) => D.evaluate(target, { action: "page_scroll", x: args.x, y: args.y }));
     return { scrolled: true };
   }
-  const base = { documentId: docFor(tab.id, args.snapshotId), snapshotId: args.snapshotId, elementId: args.elementId };
+  const base = await elementRef(tab.id, args);
   const op = { read: "read", scroll: "scroll", click: "prepare_click", upload: "prepare_click", type: "prepare_fill", press_key: "prepare_key" }[tool];
   const result = await D.withDebugger(tab.id, async (target) => {
     const prepared = await D.evaluate(target, { ...base, action: op, offset: args.offset, length: args.length, x: args.x, y: args.y });
@@ -413,14 +344,3 @@ chrome.runtime.onStartup.addListener(connectHost);
 chrome.runtime.onInstalled.addListener(connectHost);
 connectHost();
 
-// "Page scripts without asking" is on → a red JS mark on the icon, so the owner always sees it.
-async function scriptPages() { return (await chrome.storage.session.get("scriptPages")).scriptPages || []; }
-
-async function scriptsBadge() {
-  const on = (await store.get("scriptSites", [])).length > 0 || (await scriptPages()).length > 0;
-  await chrome.action.setBadgeText({ text: on ? "JS" : "" });
-  if (on) await chrome.action.setBadgeBackgroundColor({ color: "#c62828" });
-  await chrome.action.setTitle({ title: on ? "maxagent bridge — page scripts allowed without asking" : "maxagent bridge" });
-}
-chrome.storage.onChanged.addListener((ch) => { if (ch.scriptSites || ch.scriptPages) scriptsBadge(); });
-scriptsBadge();

@@ -1,12 +1,12 @@
 /* Universal page driver: one fixed page operation for any site, run through chrome.debugger.
-   A universal driver: no site-specific code. */
+   A universal driver: no site-specific code.
+   Leaves nothing the site can see (owner's rule 08.11.2026): it runs in an isolated world (the page's scripts
+   cannot reach its variables) and keeps no state in the page — an element id is its ordinal in a fixed walk of
+   the DOM; the extension keeps each element's signature and checks it before acting. */
 
 function maxagentPageOperation(request) {
-  const stateKey = "__maxagentBridgeV1";
-  const state = globalThis[stateKey] ||= {
-    documentId: crypto.randomUUID(), counter: 0, ids: new WeakMap(), nodes: new Map(),
-    snapshotId: null, capturedAt: null, signatures: new Map(),
-  };
+  // One per document: a new page (navigation, reload) gets a new time origin.
+  const documentId = String(performance.timeOrigin);
   const limit = (value, fallback, maximum) => Math.min(maximum, Math.max(0, Number(value) || fallback));
   const compact = (value, maximum = 400) => String(value || "").replace(/\s+/g, " ").trim().slice(0, maximum);
   const rendered = (node) => {
@@ -22,17 +22,40 @@ function maxagentPageOperation(request) {
     || node.getAttribute("aria-labelledby")?.split(/\s+/).map((id) => node.ownerDocument.getElementById(id)?.textContent || "").join(" ")
     || Array.from(node.labels || []).map((item) => item.innerText).join(" ")
     || node.getAttribute("alt") || node.getAttribute("title") || node.getAttribute("placeholder") || nodeText(node));
-  const register = (node) => {
-    if (!state.ids.has(node)) state.ids.set(node, `e${++state.counter}`);
-    const id = state.ids.get(node);
-    state.nodes.set(id, node);
-    return id;
-  };
   const signature = (node) => JSON.stringify([node.tagName, node.id, node.getAttribute("role"), label(node)]);
-  const describe = (node, framePath = []) => {
+  const selector = 'a[href],button,input,textarea,select,summary,[contenteditable="true"],[contenteditable=""],[role="button"],[role="textbox"],[role="link"],[role="checkbox"],[role="switch"],[role="tab"],[role="menuitem"],[role="option"],[tabindex],h1,h2,h3,main,article,[role="main"],[role="dialog"]';
+  // The fixed walk: every node matching the selector and every iframe gets the next ordinal ("e1", "e2", …);
+  // open shadow roots and same-origin frames of rendered hosts are walked in place. body is "e0".
+  let truncatedWalk = false;
+  const walk = (onNode) => {
+    let counter = 0, visited = 0, stop = false;
+    const visit = (root, path) => {
+      for (const node of root.querySelectorAll("*")) {
+        if (stop) return;
+        if (++visited > 50000) { truncatedWalk = true; stop = true; return; }
+        const isFrame = node.tagName === "IFRAME";
+        const id = node.matches(selector) || isFrame ? `e${++counter}` : null;
+        if (id && onNode(node, id, path) === false) { stop = true; return; }
+        if (node.shadowRoot && rendered(node)) visit(node.shadowRoot, path);
+        if (isFrame && rendered(node)) {
+          let doc = null;
+          try { doc = node.contentDocument?.documentElement ? node.contentDocument : null; } catch { doc = null; }
+          if (doc) visit(doc, [...path, id]);
+        }
+      }
+    };
+    visit(document, []);
+  };
+  const resolve = (elementId) => {
+    if (elementId === "e0") return document.body;
+    let found = null;
+    walk((node, id) => { if (id === elementId) { found = node; return false; } return true; });
+    return found;
+  };
+  const describe = (node, elementId, framePath = []) => {
     const rect = node.getBoundingClientRect();
     return {
-      elementId: register(node), tag: node.tagName.toLowerCase(), role: node.getAttribute("role"),
+      elementId, tag: node.tagName.toLowerCase(), role: node.getAttribute("role"),
       name: label(node), text: compact(nodeText(node), 600), domId: node.id || null,
       type: node.getAttribute("type"), href: node.getAttribute("href"),
       value: secret(node) ? "[redacted]" : typeof node.value === "string" ? node.value.slice(0, 500) : null,
@@ -44,66 +67,55 @@ function maxagentPageOperation(request) {
     };
   };
   if (request.action === "inspect") {
-    state.snapshotId = crypto.randomUUID();
-    state.capturedAt = new Date().toISOString();
-    state.nodes.clear();
-    state.signatures.clear();
     const elements = [], frames = [], textParts = [];
+    // Signatures go to the extension (it checks them before acting), never into the page.
+    const signatures = {};
     const maximum = limit(request.maxElements, 400, 2000);
     const maxText = limit(request.maxText, 20000, 200000);
-    let visited = 0, truncated = false;
-    const selector = 'a[href],button,input,textarea,select,summary,[contenteditable="true"],[contenteditable=""],[role="button"],[role="textbox"],[role="link"],[role="checkbox"],[role="switch"],[role="tab"],[role="menuitem"],[role="option"],[tabindex],h1,h2,h3,main,article,[role="main"],[role="dialog"]';
-    const rootElementId = document.body ? register(document.body) : null;
-    if (rootElementId) state.signatures.set(rootElementId, signature(document.body));
-    const visit = (root, path = []) => {
-      const body = root.nodeType === 9 ? root.body : root;
-      if (body) textParts.push(body.innerText || body.textContent || "");
-      for (const node of root.querySelectorAll("*")) {
-        if (++visited > 50000) { truncated = true; break; }
-        if (node.matches(selector) && rendered(node)) {
-          if (elements.length < maximum) {
-            const item = describe(node, path);
-            elements.push(item);
-            state.signatures.set(item.elementId, signature(node));
-          } else truncated = true;
-        }
-        if (node.shadowRoot && rendered(node)) visit(node.shadowRoot, path);
-        if (node.tagName === "IFRAME" && rendered(node)) {
-          const id = register(node);
-          try {
-            if (!node.contentDocument?.documentElement) throw new Error("frame_access_denied");
-            frames.push({ elementId: id, url: node.contentWindow.location.href, readable: true });
-            visit(node.contentDocument, [...path, id]);
-          } catch {
-            frames.push({ elementId: id, url: node.getAttribute("src"), readable: false, reason: "cross_origin_or_unavailable" });
-          }
-        }
+    let truncated = false;
+    const rootElementId = document.body ? "e0" : null;
+    if (rootElementId) signatures.e0 = signature(document.body);
+    if (document.body) textParts.push(document.body.innerText || document.body.textContent || "");
+    walk((node, id, path) => {
+      if (node.tagName === "IFRAME" && rendered(node)) {
+        let url = null;
+        try { url = node.contentDocument?.documentElement ? node.contentWindow.location.href : null; } catch { url = null; }
+        if (url) {
+          frames.push({ elementId: id, url, readable: true });
+          textParts.push(node.contentDocument.body?.innerText || "");
+        } else frames.push({ elementId: id, url: node.getAttribute("src"), readable: false, reason: "cross_origin_or_unavailable" });
+        signatures[id] = signature(node);
       }
-    };
-    visit(document);
+      if (node.matches(selector) && rendered(node)) {
+        if (elements.length < maximum) { elements.push(describe(node, id, path)); signatures[id] = signature(node); } else truncated = true;
+      }
+      return true;
+    });
     const fullText = textParts.join("\n\n");
     return {
-      documentId: state.documentId, snapshotId: state.snapshotId,
-      capturedAt: state.capturedAt, url: location.href, title: document.title, rootElementId,
+      documentId, url: location.href, title: document.title, rootElementId,
       text: fullText.slice(0, maxText), textLength: fullText.length, textTruncated: fullText.length > maxText,
-      elements, elementsTruncated: truncated, frames,
+      elements, elementsTruncated: truncated || truncatedWalk, frames, signatures,
       limitations: ["Closed shadow roots, canvas contents and cross-origin frames are not represented as DOM; use screenshot."],
     };
   }
-  if (request.documentId !== state.documentId || request.snapshotId !== state.snapshotId) throw new Error("stale_snapshot_take_a_new_one");
-  if (Date.now() - Date.parse(state.capturedAt) > 120000) throw new Error("snapshot_expired_take_a_new_one");
-  const node = state.nodes.get(request.elementId);
+  if (request.action === "page_scroll") {
+    window.scrollBy({ left: Number(request.x) || 0, top: Number(request.y) || 0, behavior: "instant" });
+    return { scrolled: true };
+  }
+  if (request.documentId !== documentId) throw new Error("stale_snapshot_take_a_new_one");
+  const node = resolve(request.elementId);
   if (!node?.isConnected) throw new Error("element_missing_or_detached");
+  if (signature(node) !== request.signature) throw new Error("element_changed_take_a_new_snapshot");
   if (request.action === "read") {
     if (secret(node)) throw new Error("sensitive_element_denied");
     const text = nodeText(node);
     const offset = Math.max(0, Number(request.offset) || 0);
     const length = limit(request.length, 30000, 200000);
-    return { element: describe(node), text: text.slice(offset, offset + length), offset, textLength: text.length, truncated: offset + length < text.length };
+    return { element: describe(node, request.elementId), text: text.slice(offset, offset + length), offset, textLength: text.length, truncated: offset + length < text.length };
   }
   if (!rendered(node)) throw new Error("element_not_visible");
   if (node.disabled || node.getAttribute("aria-disabled") === "true") throw new Error("element_disabled");
-  if (state.signatures.get(request.elementId) !== signature(node)) throw new Error("element_changed_take_a_new_snapshot");
   if (request.action === "scroll") {
     const target = node === node.ownerDocument.body || node === node.ownerDocument.documentElement ? node.ownerDocument.defaultView : node;
     target.scrollBy({ left: Number(request.x) || 0, top: Number(request.y) || 0, behavior: "instant" });
@@ -118,7 +130,7 @@ function maxagentPageOperation(request) {
     let active = node.ownerDocument.activeElement;
     while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
     if (active !== node && !node.contains(active)) throw new Error("element_focus_failed");
-    return { focused: true, element: describe(node) };
+    return { focused: true, element: describe(node, request.elementId) };
   }
   // Background tabs: Chrome does not deliver input events to a tab nobody sees (dispatchMouseEvent hangs),
   // so click and typing go through the page's own DOM there (events are untrusted, which most sites accept).
@@ -127,7 +139,7 @@ function maxagentPageOperation(request) {
     node.scrollIntoView({ block: "center", inline: "nearest", behavior: "instant" });
     node.focus?.();
     node.click();
-    return { method: "dom", element: describe(node) };
+    return { method: "dom", element: describe(node, request.elementId) };
   }
   if (request.action === "dom_fill") {
     if (secret(node)) throw new Error("sensitive_element_denied");
@@ -145,7 +157,7 @@ function maxagentPageOperation(request) {
       node.dispatchEvent(new Event("input", { bubbles: true }));
       node.dispatchEvent(new Event("change", { bubbles: true }));
     }
-    return { method: "dom", element: describe(node) };
+    return { method: "dom", element: describe(node, request.elementId) };
   }
   if (request.action === "prepare_click") {
     if (secret(node)) throw new Error("sensitive_element_denied");
@@ -165,7 +177,7 @@ function maxagentPageOperation(request) {
       if (frame.ownerDocument.elementFromPoint(x, y) !== frame) throw new Error("frame_covered_or_outside_viewport");
       win = frame.ownerDocument.defaultView;
     }
-    return { x, y, element: describe(node) };
+    return { x, y, element: describe(node, request.elementId) };
   }
   throw new Error("unsupported_page_operation");
 }
@@ -183,9 +195,12 @@ globalThis.maxagentDriver = {
     }
   },
   async evaluate(target, request) {
+    // An isolated world: same DOM, separate JavaScript — the page's scripts cannot see anything we run or keep.
+    const { frameTree } = await chrome.debugger.sendCommand(target, "Page.getFrameTree");
+    const { executionContextId } = await chrome.debugger.sendCommand(target, "Page.createIsolatedWorld", { frameId: frameTree.frame.id, worldName: "maxagent-bridge" });
     const result = await chrome.debugger.sendCommand(target, "Runtime.evaluate", {
       expression: `(${maxagentPageOperation.toString()})(${JSON.stringify(request)})`,
-      returnByValue: true, awaitPromise: true,
+      contextId: executionContextId, returnByValue: true, awaitPromise: true,
     });
     if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text || "page_operation_failed");
     if (!result.result || !("value" in result.result)) throw new Error("page_operation_empty_result");
