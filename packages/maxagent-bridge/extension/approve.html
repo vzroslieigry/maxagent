@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>maxagent bridge</title>
+<style>
+  body { font: 14px system-ui, sans-serif; margin: 18px; color: #1d1d1f; background: #fff; }
+  h1 { font-size: 17px; margin: 0 0 10px; }
+  .who { font-weight: 600; }
+  .detail { background: #f3f3f5; border-radius: 6px; padding: 8px 10px; margin: 10px 0; word-break: break-all; }
+  .warn { color: #8a4b00; font-size: 13px; margin: 8px 0; }
+  label { display: block; margin: 6px 0; }
+  .buttons { display: flex; gap: 8px; margin-top: 14px; }
+  button { font: inherit; padding: 7px 14px; border-radius: 6px; border: 1px solid #bbb; background: #fff; cursor: pointer; }
+  button.primary { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+</style>
+</head>
+<body>
+<h1 id="title"></h1>
+<div id="body"></div>
+<div class="buttons"><button id="allow" class="primary"></button><button id="deny"></button></div>
+<script src="approve.js"></script>
+</body>
+</html>

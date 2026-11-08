@@ -1,0 +1,88 @@
+{
+  "packs": [
+    {
+      "name": "agents",
+      "version": "1.0.0",
+      "title": {
+        "en": "Agents: hooks, global rules, MCP, prompt injection, accepting work",
+        "ru": "Агенты: хуки, общие правила, MCP, инъекции, приёмка работы"
+      },
+      "url": "https://github.com/vzroslieigry/maxagent/releases/download/packs-agents-1.0.0/agents-1.0.0.json",
+      "sha256": "d53e56084775a3e25905b6b255966631a05e395ce5ffc469c5d831309b37a0a0",
+      "size": 33455,
+      "atoms": 26
+    },
+    {
+      "name": "browser",
+      "version": "1.0.0",
+      "title": {
+        "en": "Chrome for agents: which browser, extensions, Native Messaging, maxagent-bridge",
+        "ru": "Chrome для агентов: какой браузер, расширения, Native Messaging, maxagent-bridge"
+      },
+      "url": "https://github.com/vzroslieigry/maxagent/releases/download/packs-browser-1.0.0/browser-1.0.0.json",
+      "sha256": "24a45fe9d8795badce5382ec08f1837ff86eccd6283857db830b5701548dcfd8",
+      "size": 26289,
+      "atoms": 20
+    },
+    {
+      "name": "git",
+      "version": "1.0.0",
+      "title": {
+        "en": "Git and GitHub next to other agents, API without gh, npm trusted publishing",
+        "ru": "Git и GitHub рядом с другими агентами, API без gh, публикация в npm"
+      },
+      "url": "https://github.com/vzroslieigry/maxagent/releases/download/packs-git-1.0.0/git-1.0.0.json",
+      "sha256": "b11c37cde14a726cd97a9d4ffc7d6dce27e4105d5db04f92c434ef069a610901",
+      "size": 13914,
+      "atoms": 11
+    },
+    {
+      "name": "media",
+      "version": "1.0.0",
+      "title": {
+        "en": "Media: ffmpeg, yt-dlp, faster-whisper",
+        "ru": "Медиа: ffmpeg, yt-dlp, faster-whisper"
+      },
+      "url": "https://github.com/vzroslieigry/maxagent/releases/download/packs-media-1.0.0/media-1.0.0.json",
+      "sha256": "fa3d639d3c1f803d8b7141a44b14203dd8372a522be575d19a189b90892f8f7a",
+      "size": 17991,
+      "atoms": 14
+    },
+    {
+      "name": "python-node",
+      "version": "1.0.0",
+      "title": {
+        "en": "Python and Node scripts: arguments, encodings, heredoc, npm packages, installers",
+        "ru": "Скрипты Python и Node: аргументы, кодировки, heredoc, пакеты npm, установщики"
+      },
+      "url": "https://github.com/vzroslieigry/maxagent/releases/download/packs-python-node-1.0.0/python-node-1.0.0.json",
+      "sha256": "d1c95f21b1f78bdc181b45c9803323f60695d29e26278a1214985c00a0a684a6",
+      "size": 13846,
+      "atoms": 11
+    },
+    {
+      "name": "windows",
+      "version": "1.0.0",
+      "title": {
+        "en": "Windows: PowerShell 5.1, Git Bash, encodings, Recycle Bin, windows",
+        "ru": "Windows: PowerShell 5.1, Git Bash, кодировки, Корзина, окна"
+      },
+      "url": "https://github.com/vzroslieigry/maxagent/releases/download/packs-windows-1.0.0/windows-1.0.0.json",
+      "sha256": "3b7a2becccd6227c28cf78a65f5d88ddee3d339b9abf11bbf0a4997df9bee68e",
+      "size": 22338,
+      "atoms": 19
+    },
+    {
+      "name": "youtube-craft",
+      "version": "1.0.0",
+      "title": {
+        "en": "YouTube craft: editing, sound, export, thumbnails, description, algorithm",
+        "ru": "Ремесло YouTube: монтаж, звук, экспорт, превью, описание, алгоритм"
+      },
+      "url": "https://github.com/vzroslieigry/maxagent/releases/download/packs-youtube-craft-1.0.0/youtube-craft-1.0.0.json",
+      "sha256": "a542ae274511f31e26c8b08dfaa76fbcff1efc319f1f9193754aed9fe76707c1",
+      "size": 43570,
+      "atoms": 34
+    }
+  ]
+}

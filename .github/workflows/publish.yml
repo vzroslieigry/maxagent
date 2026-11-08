@@ -1,0 +1,59 @@
+name: publish
+
+# Publish both packages to npm on a version tag (v0.5.0, …) with provenance, through npm trusted
+# publishing (OIDC): no NPM_TOKEN secret is stored anywhere.
+#
+# The FIRST publish of each package is done by hand — trusted publishing can only be configured for a
+# package that already exists on npmjs.com:
+#   npm login            (account with 2FA)
+#   cd packages/maxagent-bridge && npm publish --access public
+#   cd packages/maxagent && npm publish --access public
+# Then on npmjs.com → each package → Settings → Trusted publisher: GitHub Actions,
+# repository vzroslieigry/maxagent, workflow file publish.yml.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  id-token: write # OIDC token for npm trusted publishing and provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    env:
+      MAXAGENT_SKIP_PROBE: '1'
+      MAXAGENT_REGISTRY: https://127.0.0.1:9
+      MAXAGENT_NEWS_URL: https://127.0.0.1:9/news.json
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      # Trusted publishing needs a recent npm CLI.
+      - run: npm install -g npm@latest
+
+      - name: tests before publishing
+        run: |
+          (cd packages/maxagent && node test/run.js && node test/hooks.js && node test/packs.js)
+          (cd packages/maxagent-bridge && node test/run.js)
+          node scripts/check-personal.js
+
+      - name: the tag matches the maxagent version
+        run: |
+          v=$(node -p "require('./packages/maxagent/package.json').version")
+          test "v$v" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME, package.json $v"; exit 1; }
+
+      # Only versions not yet on npm are published: the bridge does not change with every release.
+      - name: maxagent-bridge
+        working-directory: packages/maxagent-bridge
+        run: |
+          v=$(node -p "require('./package.json').version")
+          if npm view "maxagent-bridge@$v" version >/dev/null 2>&1; then echo "maxagent-bridge@$v already published"; else npm publish --provenance --access public; fi
+
+      - name: maxagent
+        working-directory: packages/maxagent
+        run: npm publish --provenance --access public

@@ -1,0 +1,5 @@
+{
+  "name": "python-node",
+  "version": "1.0.0",
+  "title": { "en": "Python and Node scripts: arguments, encodings, heredoc, npm packages, installers", "ru": "Скрипты Python и Node: аргументы, кодировки, heredoc, пакеты npm, установщики" }
+}

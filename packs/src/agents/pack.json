@@ -1,0 +1,5 @@
+{
+  "name": "agents",
+  "version": "1.0.0",
+  "title": { "en": "Agents: hooks, global rules, MCP, prompt injection, accepting work", "ru": "Агенты: хуки, общие правила, MCP, инъекции, приёмка работы" }
+}

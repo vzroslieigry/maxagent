@@ -1,0 +1,5 @@
+{
+  "name": "media",
+  "version": "1.0.0",
+  "title": { "en": "Media: ffmpeg, yt-dlp, faster-whisper", "ru": "Медиа: ffmpeg, yt-dlp, faster-whisper" }
+}

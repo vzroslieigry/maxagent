@@ -1,0 +1,105 @@
+name: packs
+
+# Release one shared experience pack: push a tag packs-<name>-<version>, e.g. packs-git-1.0.0.
+# The pack is built here with ready int8 vectors (same model and revision as on users' machines),
+# attached to a GitHub Release, and packs/catalog.json on main gets its real sha256 and size.
+
+on:
+  push:
+    tags: ['packs-*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: packs-catalog
+  cancel-in-progress: false
+
+env:
+  # Must match packages/maxagent/lib/extras.js (MODEL, PY_PACKAGES).
+  MODEL_REPO: Xenova/multilingual-e5-small
+  MODEL_REVISION: 761b726dd34fb83930e26aab4e9ac3899aa1fa78
+  PY_PACKAGES: onnxruntime==1.31.0 tokenizers==0.23.3
+  MAXAGENT_VECTOR: ${{ github.workspace }}/../vector
+  MAXAGENT_SKIP_PROBE: '1'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: pack name and version from the tag
+        id: tag
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          rest="${tag#packs-}"
+          version="${rest##*-}"
+          name="${rest%-*}"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          test -f "packs/src/$name/pack.json" || { echo "no packs/src/$name"; exit 1; }
+          want=$(node -p "require('./packs/src/$name/pack.json').version")
+          test "$want" = "$version" || { echo "tag version $version, pack.json says $want"; exit 1; }
+
+      - name: model libraries
+        run: python -m pip install -q --disable-pip-version-check --target "$MAXAGENT_VECTOR/py" $PY_PACKAGES
+
+      - name: model files (pinned revision, checked by sha256)
+        run: |
+          set -e
+          mkdir -p "$MAXAGENT_VECTOR/model"
+          cd "$MAXAGENT_VECTOR/model"
+          base="https://huggingface.co/$MODEL_REPO/resolve/$MODEL_REVISION"
+          curl -fsSL -o model_quantized.onnx "$base/onnx/model_quantized.onnx"
+          curl -fsSL -o tokenizer.json "$base/tokenizer.json"
+          curl -fsSL -o config.json "$base/config.json"
+          cat > SHA256SUMS <<'EOF'
+          f80102d3f2a1229f387d3c81909990d8945513e347b0eab049f7de3c6f98c193  model_quantized.onnx
+          0b44a9d7b51c3c62626640cda0e2c2f70fdacdc25bbbd68038369d14ebdf4c39  tokenizer.json
+          cb99455288675345e1a4f411438d5d0adbba5fbd3a67ea4fb03c015433b996c1  config.json
+          EOF
+          sed -i 's/^ *//' SHA256SUMS
+          sha256sum -c SHA256SUMS
+          echo "$MODEL_REVISION" > REVISION
+          python -B "$GITHUB_WORKSPACE/packages/maxagent/tools/experience-embed.py" --self-test
+
+      - name: build the pack (lint, risky text and vectors are checked by build)
+        run: |
+          mkdir -p packs/dist
+          node packages/maxagent/tools/experience-packs.js build "packs/src/${{ steps.tag.outputs.name }}" \
+            --name "${{ steps.tag.outputs.name }}" --version "${{ steps.tag.outputs.version }}" \
+            --out "packs/dist/${{ steps.tag.outputs.name }}-${{ steps.tag.outputs.version }}.json"
+
+      - name: nothing personal in the bundle
+        run: node scripts/check-personal.js packs
+
+      - name: GitHub Release with the bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          f="packs/dist/${{ steps.tag.outputs.name }}-${{ steps.tag.outputs.version }}.json"
+          gh release create "$GITHUB_REF_NAME" "$f" \
+            --title "Experience pack ${{ steps.tag.outputs.name }} ${{ steps.tag.outputs.version }}" \
+            --notes "Shared experience pack \`${{ steps.tag.outputs.name }}\` v${{ steps.tag.outputs.version }}. sha256: $(sha256sum "$f" | cut -d' ' -f1)"
+
+      - name: catalog on main gets the real sha256 and size
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout main
+          git pull --ff-only origin main
+          node scripts/make-catalog.js
+          git add packs/catalog.json
+          if git diff --cached --quiet; then echo "catalog unchanged"; exit 0; fi
+          git commit -m "packs: ${{ steps.tag.outputs.name }} ${{ steps.tag.outputs.version }} in the catalog"
+          git push origin main
