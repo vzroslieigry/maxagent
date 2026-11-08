@@ -40,6 +40,8 @@ const atom = (head, when, step) => `### ${head}\n- когда: ${when}\n- вещ
   const r = packs.installBundle(fs.readFileSync(bundleFile), { name: 'demo' }, lib);
   check(r.files === 1 && fs.existsSync(path.join(lib, 'shared', 'demo', 'vectors.json')), 'install: files and ready vectors in experience/shared/demo');
   check(!eng.build(lib).atoms.some((a) => a.pack), 'own index does not include the shared shelf');
+  packs.installBundle(fs.readFileSync(bundleFile), { name: 'demo' }, lib);
+  check(fs.readdirSync(path.join(lib, 'shared')).join(',') === 'demo' && eng.sharedPacks(lib).length === 1, 'reinstall: the old copy goes out of experience/shared (not searched twice)', fs.readdirSync(path.join(lib, 'shared')).join(','));
 
   const qGit = await eng.queryVector('закоммить и отправь на гитхаб', 5000);
   const own = eng.recall('закоммить и отправь на гитхаб', 's1', { qvec: qGit });

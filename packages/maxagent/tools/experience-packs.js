@@ -80,8 +80,13 @@ function installBundle(buf, entry, root = eng.libraryRoot()) {
   }
   fs.writeFileSync(path.join(tmp, 'pack.json'), JSON.stringify({ name: b.name, version: b.version, model: b.model, revision: b.revision, title: b.title || entry.title || null, installedAt: new Date().toISOString() }, null, 2));
   if (b.vectors) fs.writeFileSync(path.join(tmp, 'vectors.json'), JSON.stringify({ model: b.model, revision: b.revision, vec: b.vectors }));
-  // Replace the old version only when the new one is fully written; the old goes aside, not deleted.
-  if (fs.existsSync(dir)) fs.renameSync(dir, `${dir}.old-${Date.now()}`);
+  // Replace the old version only when the new one is fully written; the old goes aside (not deleted), out of
+  // experience/shared — a copy left there was searched as a second pack (08.11.2026).
+  if (fs.existsSync(dir)) {
+    const aside = path.join(eng.stateDir(), 'packs-old', `${b.name}-${Date.now()}`);
+    fs.mkdirSync(path.dirname(aside), { recursive: true });
+    try { fs.renameSync(dir, aside); } catch { fs.cpSync(dir, aside, { recursive: true }); fs.rmSync(dir, { recursive: true, force: true }); }
+  }
   fs.renameSync(tmp, dir);
   return { name: b.name, version: b.version, files: Object.keys(b.files).length, vectors: Object.keys(b.vectors || {}).length };
 }

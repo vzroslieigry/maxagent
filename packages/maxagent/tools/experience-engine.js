@@ -313,7 +313,8 @@ function sharedPacks(root = libraryRoot(), cfg = config()) {
   const base = root ? path.join(root, 'shared') : '';
   const muted = new Set(cfg.sharedMuted || []);
   let names = [];
-  try { names = fs.readdirSync(base, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name); } catch { return []; }
+  try { names = fs.readdirSync(base, { withFileTypes: true }).filter((d) => d.isDirectory() && /^[a-z0-9-]+$/.test(d.name)).map((d) => d.name); } catch { return []; }
+  // Only real pack names: "<name>.old-…" / "<name>.new-…" leftovers of an update are not packs.
   return names.map((name) => ({ name, dir: path.join(base, name), meta: readJson(path.join(base, name, 'pack.json'), null), muted: muted.has(name) }))
     .filter((p) => p.meta);
 }
@@ -443,8 +444,11 @@ function search(text, { k = 4, minScore = 7, strong = 15, cover = 0.5, idx = bui
 
 /* ---------- shared shelf: reference only, never stops an action ---------- */
 
-// Stricter than the own shelf: shown only when the own library has nothing, at most one, compact (decision 08.11.2026).
-const SHARED_SIM_GATE = 0.88;
+// Shown only when the own library has nothing, at most one, compact (decision 08.11.2026).
+// Measured on the 7 released packs (149 atoms, 08.11.2026): unrelated requests top out at 0.811, real ones
+// 0.807–0.903 (Russian request vs English pack text ≈ 0.81–0.86). 0.88 let through 2 of 12 real ones;
+// 0.84 lets 8 of 12 and 0 of 10 unrelated (margin 0.03).
+const SHARED_SIM_GATE = 0.84;
 const SHARED_MAX_SHOWS = 8; // shown this many times and never adopted → no longer shown
 const statsFile = () => path.join(stateDir(), 'shared-stats.json');
 
