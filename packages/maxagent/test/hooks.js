@@ -138,6 +138,14 @@ check(JSON.stringify(parsed(hook('antigravity', 'invocation', { invocationNum: 3
 
 // Stop (Claude Code transcript).
 const tr = path.join(home, 'transcript.jsonl');
+// The library was just created by init: on fast machines (CI Linux/macOS) its files look "written this turn".
+// Age them by an hour so only files written by the turn itself count.
+(function age(dir) {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) age(p); else fs.utimesSync(p, new Date(Date.now() - 3600e3), new Date(Date.now() - 3600e3));
+  }
+})(path.join(ws, 'experience'));
 const t0 = new Date(Date.now() - 1000).toISOString();
 const tu = (name, input) => JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', name, input }] } });
 fs.writeFileSync(tr, [JSON.stringify({ type: 'user', timestamp: t0, message: { content: 'сделай' } }), tu('Bash', { command: 'a' }), tu('Bash', { command: 'b' }), tu('Bash', { command: 'c' }), tu('Edit', { file_path: path.join(ws, 'README.md') })].join('\n') + '\n');
