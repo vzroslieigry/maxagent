@@ -20,7 +20,7 @@
         "ru": "Chrome для агентов: какой браузер, расширения, Native Messaging, maxagent-bridge"
       },
       "url": "https://github.com/vzroslieigry/maxagent/releases/download/packs-browser-1.0.0/browser-1.0.0.json",
-      "sha256": "24a45fe9d8795badce5382ec08f1837ff86eccd6283857db830b5701548dcfd8",
+      "sha256": "b6c6e6cc42acd834eb75e73f93f6b00d56599ac366eb79cb7de0727033282611",
       "size": 26289,
       "atoms": 20
     },
