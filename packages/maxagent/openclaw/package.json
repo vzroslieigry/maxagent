@@ -1,8 +1,0 @@
-{
-  "name": "maxagent",
-  "version": "0.4.0",
-  "private": true,
-  "type": "module",
-  "description": "maxagent for OpenClaw: core rules and experience hints in every prompt, destructive commands blocked.",
-  "openclaw": { "extensions": ["./index.js"] }
-}

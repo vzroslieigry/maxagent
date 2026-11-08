@@ -1,7 +1,0 @@
-{
-  "id": "maxagent",
-  "name": "maxagent",
-  "description": "Core rules and experience hints in every prompt; destructive commands blocked.",
-  "activation": { "onStartup": true },
-  "configSchema": { "type": "object", "additionalProperties": false }
-}

@@ -1,4 +1,0 @@
-# Secrets never go into the repository
-.env
-*.key
-*.pem
