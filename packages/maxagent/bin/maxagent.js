@@ -53,7 +53,7 @@ const HELP = `maxagent ${PKG.version}
   npx maxagent index       собрать индекс опыта из шапок (--check — только проверить) / rebuild the experience index (--check to only check)
   npx maxagent bridge      поставить браузерный мост и расширение Chrome / install the browser bridge and Chrome extension
   npx maxagent vectors     поставить поиск опыта по смыслу (~270 МБ) / install meaning search (~270 MB)
-  npx maxagent experience list|add <набор>|all|update|mute|unmute|adopt "<id>"   общий опыт / shared experience packs
+  npx maxagent experience list|add <набор>|all|update|mute|unmute|adopt "<id>"|share <папка> --name <имя>   общий опыт / shared experience packs
   --all (init: поставить все дополнения / install all extras)  --no-extras (без дополнений / no extras)
 
   --lang ru|en  --workspace <path>  --agents claude-code,codex,antigravity,openclaw

@@ -2,7 +2,14 @@
 
 maxagent and maxagent-bridge always share one version number and are released together.
 
-## 0.5.0 — unreleased
+## 0.5.1
+
+- `npx maxagent experience share`: check and prepare a pack for the shared library (format, secrets, planted commands, personal data); sends nothing.
+- CONTRIBUTING, pack submission form, automatic pack release after a merge.
+- Self-update uses `--prefer-online`.
+- CI: clean install from the packed tarballs on Windows, Linux and macOS, all required.
+
+## 0.5.0
 
 ### maxagent
 - **Two shelves of experience.** Own experience (`experience/`) surfaces and may stop commands; shared packs (`experience/shared/<pack>/`) are reference only: shown when the own shelf has nothing, at most one atom per message, compact, never stop a command, usage counter on the machine. Meaning threshold for shared packs measured on the released packs (0.84).

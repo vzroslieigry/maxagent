@@ -199,6 +199,67 @@ async function build(dir, name, version, outFile) {
   return 0;
 }
 
+/* ---------- share: prepare own experience for the shared library (nothing is sent anywhere) ---------- */
+
+/** Things that identify the person or their machine. On top of the lint's secrets check. */
+function personalHits(text) {
+  const os = require('os');
+  const me = [];
+  try { me.push(os.userInfo().username); } catch { /* unknown */ }
+  me.push(os.hostname());
+  const words = me.filter((w) => w && w.length >= 3 && !/^(user|admin|root|home|runner)$/i.test(w));
+  const esc = (w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const rules = [
+    [/[A-Za-z]:[\\/]+Users[\\/]+(?!\.\.\.|<|%|(you|name|user|username|Public|Default|All Users)\b)[\w.-]/i, 'личная папка'],
+    [/(^|[\s`"'(])\/(home|Users)\/(?!\.\.\.|<|\$|(you|name|user|username|Shared)\b)[\w.-]/, 'личная папка'],
+    [/[\w.%+-]+@(?!example\.|users\.noreply\.github\.com)[\w-]+\.[A-Za-z]{2,}/, 'адрес почты'],
+    [/\b(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d{1,3}\.\d{1,3})\b/, 'адрес внутренней сети'],
+    ...words.map((w) => [new RegExp(`(^|[^\\p{L}\\d])${esc(w)}($|[^\\p{L}\\d])`, 'iu'), 'имя пользователя или компьютера']),
+  ];
+  const hits = [];
+  text.split(/\r?\n/).forEach((line, i) => { for (const [rx, why] of rules) if (rx.test(line)) hits.push({ line: i + 1, why, text: line.trim().slice(0, 120) }); });
+  return hits;
+}
+
+/**
+ * share <folder> --name <pack> [--version 1.0.0] [--title "…"] [--out <folder>]
+ * Checks atoms (format, secrets, planted commands, anything personal) and lays out packs/src/<pack>/ ready for a
+ * pull request. Any finding → nothing is written. Vectors are computed later by the repository's CI.
+ */
+function share(dir, { name, version = '1.0.0', title, outDir } = {}) {
+  if (!dir || !fs.existsSync(dir)) { out('укажите папку с атомами опыта'); return 2; }
+  if (!/^[a-z0-9-]+$/.test(name || '')) { out('--name: латиница в нижнем регистре, цифры, дефис'); return 2; }
+  if (!/^\d+\.\d+\.\d+$/.test(version)) { out('--version: вида 1.0.0'); return 2; }
+  const root = path.resolve(dir);
+  const files = eng.walk(root, [], new Set(['shared'])).sort();
+  if (!files.length) { out('в папке нет файлов опыта (.md)'); return 2; }
+  let bad = 0, atoms = 0;
+  const texts = {};
+  for (const f of files) {
+    const rel = path.relative(root, f).replace(/\\/g, '/');
+    const text = fs.readFileSync(f, 'utf8');
+    for (const e of eng.lint(text, path.basename(f))) { out(`${rel}:${e.line}: ${e.code} ${e.msg}`); bad++; }
+    for (const h of scan(text)) { out(`${rel}:${h.line}: ОПАСНО — ${h.why}: ${h.text}`); bad++; }
+    for (const h of personalHits(text)) { out(`${rel}:${h.line}: ЛИЧНОЕ — ${h.why}: ${h.text}`); bad++; }
+    atoms += eng.parse(text).atoms.length;
+    texts[rel] = text;
+  }
+  if (!atoms) { out('в файлах нет атомов опыта (### …)'); return 2; }
+  if (bad) { out(`набор не подготовлен: замечаний ${bad}. Исправьте их и запустите снова — ничего не записано и никуда не отправлено.`); return 1; }
+  const target = path.join(path.resolve(outDir || `maxagent-pack-${name}`), 'packs', 'src', name);
+  if (fs.existsSync(target)) { out(`папка уже есть: ${target}`); return 2; }
+  for (const [rel, text] of Object.entries(texts)) {
+    const f = path.join(target, rel);
+    fs.mkdirSync(path.dirname(f), { recursive: true });
+    fs.writeFileSync(f, text);
+  }
+  const label = title || name;
+  fs.writeFileSync(path.join(target, 'pack.json'), JSON.stringify({ name, version, title: { en: label, ru: label } }, null, 2) + '\n');
+  out(`готово: файлов ${files.length}, атомов ${atoms}\n${target}`);
+  out('Ничего не отправлено. Прочитайте файлы сами, затем сделайте форк https://github.com/vzroslieigry/maxagent , положите эту папку в packs/src/ и откройте Pull Request (CONTRIBUTING.md).');
+  return 0;
+}
+
 async function main(argv) {
   const [cmd, ...rest] = argv;
   const opt = (k) => (rest.includes(k) ? rest[rest.indexOf(k) + 1] : undefined);
@@ -208,11 +269,12 @@ async function main(argv) {
     if (cmd === 'update') return await update();
     if (cmd === 'mute' || cmd === 'unmute') return mute(rest[0], cmd === 'mute');
     if (cmd === 'adopt') return adopt(rest.join(' '));
+    if (cmd === 'share') return share(rest[0], { name: opt('--name'), version: opt('--version'), title: opt('--title'), outDir: opt('--out') });
     if (cmd === 'build') return await build(rest[0], opt('--name'), opt('--version'), opt('--out'));
   } catch (e) { out(`ошибка: ${e.message}`); return 1; }
   out('node experience-packs.js list | add <набор>|all | update | mute|unmute <набор> | adopt "<id>" | build <папка> --name <n> --version <v>');
   return 2;
 }
 
-module.exports = { scan, installBundle, adopt, build };
+module.exports = { scan, installBundle, adopt, build, share, personalHits };
 if (require.main === module) main(process.argv.slice(2)).then((c) => { process.exitCode = c; });

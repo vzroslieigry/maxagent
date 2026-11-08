@@ -7,6 +7,8 @@ name: packs
 on:
   push:
     tags: ['packs-*']
+  # Started by release-packs.yml with --ref <tag> after a merge.
+  workflow_dispatch:
 
 permissions:
   contents: write

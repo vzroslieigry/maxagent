@@ -2,6 +2,10 @@
 
 에이전트는 업데이트 뒤 한 번 주인에게 새 기능을 보여 주고 (규칙, 8절) `experience/maxagent.md`에 기록을 남깁니다.
 
+## 0.5.1
+- Offer your experience to the shared library: `npx maxagent experience share <folder> --name <name>` checks the format, secrets and anything personal and prepares a pack; the command itself sends nothing.
+- Self-update sees a fresh release at once.
+
 ## 0.5.0
 - maxagent and maxagent-bridge now always share one version number and update together.
 - Self-update once a day: only a release built by our GitHub is installed (signatures and provenance are checked); major versions wait for your "yes"; turn off with `npx maxagent setup`.

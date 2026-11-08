@@ -1,0 +1,38 @@
+name: release-packs
+
+# After a merge: every pack whose version has no tag yet gets one, and its release is built by packs.yml.
+# A tag pushed with GITHUB_TOKEN does not start workflows, so packs.yml is started explicitly (one run per tag).
+
+on:
+  push:
+    branches: [main]
+    paths: ['packs/src/*/pack.json']
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: tag new pack versions and start their releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for f in packs/src/*/pack.json; do
+            name=$(basename "$(dirname "$f")")
+            version=$(node -p "require('./$f').version")
+            tag="packs-$name-$version"
+            if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then continue; fi
+            echo "new: $tag"
+            git tag "$tag"
+            git push -q origin "$tag"
+            gh workflow run packs.yml --ref "$tag"
+          done

@@ -15,8 +15,6 @@ jobs:
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
-    # The packages are developed and checked on Windows first; Linux and macOS are informative until they pass.
-    continue-on-error: ${{ matrix.os != 'windows-latest' }}
     env:
       MAXAGENT_SKIP_PROBE: '1'
       # Tests must never reach the network for update checks.
@@ -63,19 +61,38 @@ jobs:
         working-directory: packages/maxagent-bridge
         run: node test/run.js
 
-      - name: package contents
+      # What a new user gets: the packed tarballs, installed into an empty home.
+      - name: clean install from the packed tarballs
         shell: bash
         run: |
-          (cd packages/maxagent && npm pack --dry-run)
-          (cd packages/maxagent-bridge && npm pack --dry-run)
+          set -e
+          work="$RUNNER_TEMP/clean"
+          mkdir -p "$work/pkg" "$work/home"
+          (cd packages/maxagent && npm pack --silent --pack-destination "$work/pkg")
+          (cd packages/maxagent-bridge && npm pack --silent --pack-destination "$work/pkg")
+          cd "$work"
+          echo '{"private":true}' > package.json
+          npm install --ignore-scripts --no-audit --no-fund pkg/*.tgz
+          node node_modules/maxagent/bin/maxagent.js init --home "$work/home" --yes --lang en --workspace "$work/home/ws" --no-extras
+          test -f "$work/home/.maxagent/config.json"
+          test -f "$work/home/ws/AGENTS.md"
+          node node_modules/maxagent-bridge/bin/maxagent-bridge.js install --home "$work/home" --no-agents
+          test -f "$work/home/.maxagent-bridge/extension/manifest.json"
 
   checks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: every pack has a valid pack.json; a changed pack raises its version
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/check-packs.js
 
       - name: lint every pack source (format, secrets, one-word triggers)
         run: |

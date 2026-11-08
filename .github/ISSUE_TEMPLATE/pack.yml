@@ -1,0 +1,40 @@
+name: Submit an experience pack / Прислать набор опыта
+description: For those who do not use git. / Для тех, кто не работает с git.
+title: "[pack] "
+labels: ["pack"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Prepare the pack first / Сначала подготовьте набор: `npx maxagent experience share <folder> --name <pack-name>`.
+        Attach `packs/src/<pack-name>` as a .zip below. Issues are public: nothing personal.
+        Приложите папку `packs/src/<имя>` архивом .zip ниже. Заявки видны всем: ничего личного.
+  - type: input
+    id: name
+    attributes:
+      label: Pack name / Имя набора
+      placeholder: my-pack
+    validations:
+      required: true
+  - type: textarea
+    id: about
+    attributes:
+      label: What is it about, and what was tested? / О чём набор и что проверено на деле?
+    validations:
+      required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: The .zip file / Архив .zip
+      description: Drag the file here. / Перетащите файл сюда.
+    validations:
+      required: true
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Confirmation / Подтверждение
+      options:
+        - label: The `share` check passed and I read the files myself. / Проверка `share` пройдена, файлы я прочитал сам.
+          required: true
+        - label: Nothing personal or secret; published under MIT. / Ничего личного и секретного; публикуется под MIT.
+          required: true

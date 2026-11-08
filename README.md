@@ -87,3 +87,7 @@ scripts/                   sync and checks used by CI
 Translations of the rules are made by an agent and not yet checked by native speakers.
 
 License: [MIT](LICENSE).
+
+## Share your experience
+
+Packs from the community are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). Every pack is reviewed before release.
