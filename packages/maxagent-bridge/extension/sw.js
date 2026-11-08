@@ -7,7 +7,7 @@ const HOST = "com.maxagent.bridge";
 // Версия КОДА (не манифеста): по ней установщик видит, что Chrome действительно загрузил новый скрипт.
 // Chrome после перезапуска перечитывает манифест, но может держать старый код фонового скрипта из кэша (05.11.2026).
 // Поднимать вместе с "version" в manifest.json.
-const CODE_VERSION = "0.1.8";
+const CODE_VERSION = "0.1.9";
 const P = globalThis.maxagentPolicy;
 const D = globalThis.maxagentDriver;
 const LOG_MAX = 300;
@@ -148,7 +148,7 @@ async function onCall({ conn, id, tool, args }) {
       return reply(true, { connected: true, rights: s.rights, stopped: await store.get("stopped", false), extensionVersion: chrome.runtime.getManifest().version });
     }
     if (await store.get("stopped", false)) throw new Error("bridge_stopped_by_owner");
-    const d = P.decide(tool, s.rights, { scripts: await store.get("allowScripts", false) });
+    let d = P.decide(tool, s.rights);
     if (!d.allow) throw new Error(d.reason);
     const bl = await blocklist();
     let tab = null;
@@ -162,11 +162,14 @@ async function onCall({ conn, id, tool, args }) {
       if (why) throw new Error(why);
       entry.to = P.hostOf(args.url);
     }
+    // Page scripts: no question where the owner allowed this page or this site.
+    if (P.OWNER_GATED.has(tool) && tab) d = P.decide(tool, s.rights, { scripts: P.scriptsAllowed(tab.url, await store.get("scriptSites", []), await scriptPages()) });
     if (d.confirm) {
-      const answer = await askOwner({ kind: "action", agent: s.agent, tool, site: entry.site || entry.to || "", detail: describeAction(tool, args) });
+      const answer = await askOwner({ kind: "action", agent: s.agent, tool, site: entry.site || entry.to || "", page: tab ? P.pageKey(tab.url) : "", detail: describeAction(tool, args) });
       if (!answer.allow) throw new Error("owner_denied_this_action");
-      // Only the owner's click in approve.html sets this — no agent call can (the popup turns it off again).
-      if (answer.always && P.OWNER_GATED.has(tool)) await store.set("allowScripts", true);
+      // Only the owner's click in approve.html sets these — no agent call can; the popup lists and removes them.
+      if (P.OWNER_GATED.has(tool) && tab && answer.scope === "site" && entry.site) await store.set("scriptSites", [...new Set([...(await store.get("scriptSites", [])), entry.site])]);
+      if (P.OWNER_GATED.has(tool) && tab && answer.scope === "page") await chrome.storage.session.set({ scriptPages: [...new Set([...(await scriptPages()), P.pageKey(tab.url)])] });
     }
     const result = await run(tool, args, tab, bl);
     await log({ ...entry, ok: true });
@@ -411,11 +414,13 @@ chrome.runtime.onInstalled.addListener(connectHost);
 connectHost();
 
 // "Page scripts without asking" is on → a red JS mark on the icon, so the owner always sees it.
+async function scriptPages() { return (await chrome.storage.session.get("scriptPages")).scriptPages || []; }
+
 async function scriptsBadge() {
-  const on = await store.get("allowScripts", false);
+  const on = (await store.get("scriptSites", [])).length > 0 || (await scriptPages()).length > 0;
   await chrome.action.setBadgeText({ text: on ? "JS" : "" });
   if (on) await chrome.action.setBadgeBackgroundColor({ color: "#c62828" });
   await chrome.action.setTitle({ title: on ? "maxagent bridge — page scripts allowed without asking" : "maxagent bridge" });
 }
-chrome.storage.onChanged.addListener((ch) => { if (ch.allowScripts) scriptsBadge(); });
+chrome.storage.onChanged.addListener((ch) => { if (ch.scriptSites || ch.scriptPages) scriptsBadge(); });
 scriptsBadge();

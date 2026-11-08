@@ -52,6 +52,21 @@
     return { allow: true, confirm: rights === "confirm" || ALWAYS_CONFIRM.has(tool) || (OWNER_GATED.has(tool) && !opts.scripts) };
   }
 
+  /** A page = its URL without the #fragment (a single-page app changing only the hash stays the same page). */
+  function pageKey(url) {
+    try { const u = new URL(String(url)); u.hash = ""; return u.href; } catch { return null; }
+  }
+
+  /**
+   * Page scripts without asking: the owner chose "for this site" (sites: hosts, kept) or "for this page"
+   * (pages: pageKey list, until the browser closes). Exact host — "mail.example.com" does not cover "example.com".
+   */
+  function scriptsAllowed(url, sites, pages) {
+    const host = hostOf(url);
+    if (!host) return false;
+    return (sites || []).includes(host) || (pages || []).includes(pageKey(url));
+  }
+
   /** Project chunk size: Native Messaging allows 64 MiB Chrome→host and 1 MiB host→Chrome. */
   function chunks(id, obj, size = 200000) {
     const s = JSON.stringify(obj);
@@ -62,7 +77,7 @@
     return out;
   }
 
-  const api = { DEFAULT_BLOCKLIST, READ_TOOLS, ACT_TOOLS, TAB_CONTENT_TOOLS, OWNER_GATED, urlDenied, decide, chunks, hostOf };
+  const api = { DEFAULT_BLOCKLIST, READ_TOOLS, ACT_TOOLS, TAB_CONTENT_TOOLS, OWNER_GATED, urlDenied, pageKey, scriptsAllowed, decide, chunks, hostOf };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.maxagentPolicy = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

@@ -30,6 +30,10 @@ check(P.decide('evaluate', 'act').allow && P.decide('evaluate', 'act').confirm, 
 check(!P.decide('evaluate', 'act', { scripts: true }).confirm, 'policy: page script without asking only when the owner switched it on');
 check(!P.decide('evaluate', 'read', { scripts: true }).allow, 'policy: read-only agent never runs page scripts');
 check(P.decide('evaluate', 'confirm', { scripts: true }).confirm, 'policy: "confirm" agent is asked even with scripts on');
+check(P.scriptsAllowed('https://elevenreader.io/reader/x', ['elevenreader.io'], []), 'scripts: "for this site" covers every page of the site');
+check(!P.scriptsAllowed('https://evil.elevenreader.io.example.com/', ['elevenreader.io'], []) && !P.scriptsAllowed('https://mail.example.com/', ['example.com'], []), 'scripts: site match is the exact host');
+check(P.scriptsAllowed('https://a.com/p?q=1#top', [], [P.pageKey('https://a.com/p?q=1')]) && !P.scriptsAllowed('https://a.com/other', [], [P.pageKey('https://a.com/p?q=1')]), 'scripts: "for this page" — same page (hash ignored), not the rest of the site');
+check(!P.scriptsAllowed('chrome://settings', ['settings'], []), 'scripts: never on non-web pages');
 check(P.decide('record_tab_start', 'act').allow && !P.decide('record_tab_start', 'read').allow, 'policy: recording tab audio needs an act agent');
 {
   const { saveRecording } = require('../lib/mcp');
