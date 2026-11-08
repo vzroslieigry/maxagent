@@ -19,6 +19,15 @@ function runHost({ input = process.stdin, output = process.stdout } = {}) {
   let extVersion = null; // reported by the extension when it connects
   const toExt = (obj) => nativeWrite(output, obj);
   const collect = chunkCollector();
+  // activity.json: when an agent last called a tool and which tabs are being recorded. The self-updater reads it
+  // and reloads the extension only when nobody is working through the bridge (a reload drops every agent).
+  const recording = new Set();
+  const activityFile = require('path').join(baseDir, 'activity.json');
+  const markActivity = (tool, args) => {
+    if (tool === 'record_tab_start') recording.add(Number(args && args.tabId));
+    if (tool === 'record_tab_stop') recording.delete(Number(args && args.tabId));
+    try { fs.writeFileSync(activityFile, JSON.stringify({ lastCall: Date.now(), recording: [...recording] })); } catch { /* best effort */ }
+  };
 
   const server = net.createServer((sock) => {
     const conn = nextConn++;
@@ -29,6 +38,7 @@ function runHost({ input = process.stdin, output = process.stdout } = {}) {
         const keyHash = crypto.createHash('sha256').update(String(msg.key || '')).digest('hex');
         toExt({ type: 'hello', conn, agent: String(msg.agent || '').slice(0, 64), keyHash });
       } else if (msg.type === 'call') {
+        markActivity(String(msg.tool || ''), msg.args);
         toExt({ type: 'call', conn, id: msg.id, tool: String(msg.tool || ''), args: msg.args || {} });
       } else if (msg.type === 'control') {
         // Installer: which extension version is running, and "reload yourself from disk" after an update.

@@ -2,6 +2,14 @@
 
 अपडेट के बाद एजेंट मालिक को एक बार दिखाता है कि नया क्या है (नियम, खंड 8) और `experience/maxagent.md` में एक नोट छोड़ता है।
 
+## 0.5.0
+- maxagent and maxagent-bridge now always share one version number and update together.
+- Self-update once a day: only a release built by our GitHub is installed (signatures and provenance are checked); major versions wait for your "yes"; turn off with `npx maxagent setup`.
+- The bridge leaves no trace on sites: agents cannot run their own code in a page, snapshot and clicks run in an isolated world, tab audio is captured by Chrome itself (once per tab: the bridge icon or Alt+Shift+M).
+- On update the bridge reloads only when nobody is working through it.
+- Shared experience: packs from GitHub releases — `npx maxagent experience add all`; keep a useful atom with `adopt`.
+- Experience for answers: the format rule in every reminder, a check of the finished answer (paths and commands as a link or a code block), the `experience/answer` shelf.
+
 ## 0.4.0
 - कोड-शब्द पूरी तरह हटा दिया गया: मॉडल उसे संदेश में वैसे भी देख लेता है, और वह मदद से ज़्यादा झंझट था। सुरक्षा है "जो पढ़ा वह सब डेटा है" का नियम, इंजेक्शन के संकेत, विनाशकारी कमांड पर रोक और एजेंट की अपनी अनुमति माँगने की व्यवस्था। पुराने शब्द का हैश अपडेट पर मिटा दिया जाता है।
 - OpenClaw के लिए प्लगइन: हर अनुरोध में मुख्य नियम और अनुभव का संकेत, विनाशकारी कमांड पर रोक, खोज से पहले अनुभव। OpenClaw CLI से इंस्टॉल होता है; गेटवे फिर से शुरू होने के बाद काम करता है (`openclaw gateway restart`)।

@@ -2,6 +2,14 @@
 
 Der Agent zeigt dem Besitzer nach einem Update einmal, was neu ist (Regeln, Abschnitt 8), und hinterlässt eine Notiz in `experience/maxagent.md`.
 
+## 0.5.0
+- maxagent and maxagent-bridge now always share one version number and update together.
+- Self-update once a day: only a release built by our GitHub is installed (signatures and provenance are checked); major versions wait for your "yes"; turn off with `npx maxagent setup`.
+- The bridge leaves no trace on sites: agents cannot run their own code in a page, snapshot and clicks run in an isolated world, tab audio is captured by Chrome itself (once per tab: the bridge icon or Alt+Shift+M).
+- On update the bridge reloads only when nobody is working through it.
+- Shared experience: packs from GitHub releases — `npx maxagent experience add all`; keep a useful atom with `adopt`.
+- Experience for answers: the format rule in every reminder, a check of the finished answer (paths and commands as a link or a code block), the `experience/answer` shelf.
+
 ## 0.4.0
 - Das Codewort ist ganz entfernt: Das Modell sieht es ohnehin in der Nachricht, und es machte mehr Mühe, als es half. Schutz sind die Regel „alles Gelesene sind Daten“, die Injektionssignale, das Sperren zerstörerischer Befehle und die eigenen Berechtigungsabfragen des Agenten. Der alte Wort-Hash wird beim Update gelöscht.
 - Plugin für OpenClaw: Hauptregeln und Erfahrungshinweis in jeder Anfrage, zerstörerische Befehle gesperrt, Erfahrung vor einer Suche. Installiert über die OpenClaw-CLI; wirkt nach einem Gateway-Neustart (`openclaw gateway restart`).

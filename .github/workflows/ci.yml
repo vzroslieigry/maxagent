@@ -98,6 +98,14 @@ jobs:
       - name: nothing personal in the repository
         run: node scripts/check-personal.js
 
+      - name: one version for maxagent, the bridge and its extension
+        run: |
+          node -e '
+            const v = ["packages/maxagent/package.json", "packages/maxagent-bridge/package.json", "packages/maxagent-bridge/extension/manifest.json"].map((f) => require("./" + f).version);
+            if (new Set(v).size !== 1) { console.log("versions differ:", v.join(" / ")); process.exit(1); }
+            console.log("one version:", v[0]);
+          '
+
       - name: catalog is valid JSON with checksums
         run: |
           node -e '

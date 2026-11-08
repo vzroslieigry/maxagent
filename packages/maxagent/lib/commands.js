@@ -31,6 +31,8 @@ function loadConfig(home) {
 function withDefaults(cfg, home) {
   if (cfg.answerFormat === undefined) cfg.answerFormat = true;
   if (cfg.trash === undefined) cfg.trash = true;
+  // Self-update is on unless the owner said no; the old value "patch" (0.4.x) also means on.
+  if (cfg.autoUpdate === undefined || cfg.autoUpdate === 'patch') cfg.autoUpdate = true;
   if (cfg.desktop === undefined) cfg.desktop = null;
   if (cfg.bridge === undefined) cfg.bridge = fs.existsSync(path.join(home, '.maxagent-bridge'));
   return cfg;
@@ -183,6 +185,7 @@ async function askSettings(rl, lang, cur, opts, io, home) {
 
   out.answerFormat = opts.answerFormat !== undefined ? opts.answerFormat : await askYesNo(rl, lang, 'askFormat', cur.answerFormat !== false);
   out.trash = opts.trash !== undefined ? opts.trash : await askYesNo(rl, lang, 'askTrash', cur.trash !== false);
+  out.autoUpdate = opts.autoUpdate !== undefined ? opts.autoUpdate : await askYesNo(rl, lang, 'askUpdate', cur.autoUpdate !== false);
   return out;
 }
 
@@ -198,6 +201,7 @@ function settingsLines(cfg, home) {
     `- ${L('sDesktop')}: ${cfg.desktop ? t(cfg.lang, 'desktopOn', { n: cfg.desktop }) : L('off')}`,
     `- ${L('sFormat')}: ${yn(cfg.answerFormat !== false)}`,
     `- ${L('sTrash')}: ${yn(cfg.trash !== false)}`,
+    `- ${L('sUpdate')}: ${yn(cfg.autoUpdate !== false)}`,
   ];
 }
 
@@ -239,6 +243,7 @@ async function init(opts, io) {
       desktop: s.desktop,
       answerFormat: s.answerFormat,
       trash: s.trash,
+      autoUpdate: s.autoUpdate,
       installedAt: (prev && prev.installedAt) || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }, home);
@@ -457,7 +462,7 @@ async function setup(opts, io) {
   }
   if (opts.dryRun) io.out(t(cfg.lang, 'dryRun'));
   const w = new Writer({ dry: opts.dryRun, log: io.out });
-  Object.assign(cfg, { repo: s.repo, bridge: s.bridge, desktop: s.desktop, answerFormat: s.answerFormat, trash: s.trash, updatedAt: new Date().toISOString() });
+  Object.assign(cfg, { repo: s.repo, bridge: s.bridge, desktop: s.desktop, answerFormat: s.answerFormat, trash: s.trash, autoUpdate: s.autoUpdate, updatedAt: new Date().toISOString() });
   delete cfg.codeword;
   applyRules(cfg, w);
   if (cfg.repo && !fs.existsSync(path.join(cfg.workspace, '.git'))) {

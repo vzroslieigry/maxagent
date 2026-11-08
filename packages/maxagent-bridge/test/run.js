@@ -33,6 +33,18 @@ check(!P.decide('evaluate', 'act').allow && !require('../lib/tools').TOOLS.some(
   check(!/globalThis\[|window\.__|__maxagent/.test(drv) && /createIsolatedWorld/.test(drv) && /contextId: executionContextId/.test(drv), 'page operations: isolated world, no variables left in the page');
   check(!/AudioNode\.prototype|captureStream|userGesture/.test(sw), 'tab audio: no hooks inside the page, only Chrome tab capture');
 }
+{
+  const { bridgeBusy } = require('../lib/activity');
+  const dirB = fs.mkdtempSync(path.join(os.tmpdir(), 'maxagent-bridge-test-busy-'));
+  const now = Date.now();
+  check(!bridgeBusy(dirB, now).busy, 'quiet: no activity file → not busy');
+  fs.writeFileSync(path.join(dirB, 'activity.json'), JSON.stringify({ lastCall: now - 2 * 60000, recording: [] }));
+  check(bridgeBusy(dirB, now).busy && bridgeBusy(dirB, now).why === 'recent', 'busy: an agent called 2 min ago');
+  fs.writeFileSync(path.join(dirB, 'activity.json'), JSON.stringify({ lastCall: now - 30 * 60000, recording: [] }));
+  check(!bridgeBusy(dirB, now).busy, 'quiet: last call 30 min ago');
+  fs.writeFileSync(path.join(dirB, 'activity.json'), JSON.stringify({ lastCall: now - 30 * 60000, recording: [5] }));
+  check(bridgeBusy(dirB, now).why === 'recording', 'busy: a tab recording is running (even with no calls for 30 min)');
+}
 check(P.decide('record_tab_start', 'act').allow && !P.decide('record_tab_start', 'read').allow, 'policy: recording tab audio needs an act agent');
 {
   const { saveRecording } = require('../lib/mcp');
@@ -212,6 +224,12 @@ check(!P.urlDenied('https://bank.example/', ['other.com']), 'policy: owner\'s ow
   check(ag.mcpServers['maxagent-bridge'].args.includes('antigravity'), 'Antigravity: MCP added');
   x = run('install');
   check((fs.readFileSync(path.join(home, '.codex', 'config.toml'), 'utf8').match(/maxagent-bridge:start/g) || []).length === 1, 'second install: no duplicate Codex block');
+  fs.writeFileSync(path.join(b, 'activity.json'), JSON.stringify({ lastCall: Date.now() - 60000, recording: [] }));
+  x = run('install');
+  check(x.status === 3 && /отложена|postponed/.test(x.stdout) && fs.existsSync(path.join(b, 'extension', 'manifest.json')), 'install while an agent works: files copied, extension reload postponed (exit 3)', x.stdout);
+  x = run('reload');
+  check(x.status === 3, 'reload while busy: postponed');
+  fs.unlinkSync(path.join(b, 'activity.json'));
   x = run('doctor');
   check(x.status === 0 && /INFO/.test(x.stdout), 'doctor: 0 errors, browser not connected reported as info', x.stdout);
   x = run('uninstall');

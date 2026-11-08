@@ -19,6 +19,7 @@ function parse(argv) {
   for (let i = 1; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--dry-run') o.dryRun = true;
+    else if (a === '--force') o.force = true;
     else if (a === '--agents') o.agents = argv[++i] || '';
     // PowerShell 5.1 drops an empty "" argument, so "--agents ''" cannot mean "none" there — use this flag.
     else if (a === '--no-agents') o.agents = '';

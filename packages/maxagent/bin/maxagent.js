@@ -57,7 +57,7 @@ const HELP = `maxagent ${PKG.version}
   --all (init: поставить все дополнения / install all extras)  --no-extras (без дополнений / no extras)
 
   --lang ru|en  --workspace <path>  --agents claude-code,codex,antigravity,openclaw
-  --repo <url> (- — выключить / off)  --bridge | --no-bridge  --desktop <N> (0 — нет / none)  --no-answer-format  --no-trash
+  --repo <url> (- — выключить / off)  --bridge | --no-bridge  --desktop <N> (0 — нет / none)  --no-answer-format  --no-trash  --no-auto-update
   --yes (без вопросов / no questions)  --dry-run (ничего не писать / write nothing)  --no-hooks
   --home <dir>  (домашняя папка для проверки / home folder override for testing)
 `;
@@ -90,6 +90,8 @@ function parse(argv) {
     else if (a === '--answer-format') opts.answerFormat = true;
     else if (a === '--no-trash') opts.trash = false;
     else if (a === '--trash') opts.trash = true;
+    else if (a === '--no-auto-update') opts.autoUpdate = false;
+    else if (a === '--auto-update') opts.autoUpdate = true;
     else if (a === '--all') opts.all = true;
     else if (a === '--no-extras') opts.noExtras = true;
     else {

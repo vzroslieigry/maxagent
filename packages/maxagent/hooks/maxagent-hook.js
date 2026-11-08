@@ -762,19 +762,24 @@ function updateLines() {
   if (CFG.updates === false) return [];
   const stateDir = path.join(ROOT, 'state');
   const st = readJson(path.join(stateDir, 'update.json'), null);
-  if (!st || Date.now() - (st.at || 0) > 24 * 3600 * 1000) {
+  const spawnCheck = (args = []) => {
     try {
-      const p = require('child_process').spawn(process.execPath, [path.join(ROOT, 'tools', 'update-check.js')], { detached: true, stdio: 'ignore', windowsHide: true });
+      const p = require('child_process').spawn(process.execPath, [path.join(ROOT, 'tools', 'update-check.js'), ...args], { detached: true, stdio: 'ignore', windowsHide: true });
       p.unref();
     } catch { /* no check this time */ }
-  }
+  };
+  if (!st || Date.now() - (st.at || 0) > 24 * 3600 * 1000) spawnCheck();
+  // The bridge's extension reload was postponed (an agent was working): retry at most every 30 minutes.
+  else if (st.bridgePending && Date.now() - (st.pendingTry || st.at || 0) > 30 * 60 * 1000) spawnCheck(['--pending']);
   if (!st) return [];
   const out = [];
   const shownFile = path.join(stateDir, 'update-shown.json');
   const shown = readJson(shownFile, { news: [] });
   const latest = st.latest && st.latest.maxagent;
-  if (st.autoUpdated) out.push(L.autoUpdated(st.autoUpdated));
-  else if (latest && verNewer(latest, CFG.version) && (shown.version !== latest || Date.now() - (shown.at || 0) > 24 * 3600 * 1000)) {
+  if (st.autoUpdated && shown.autoUpdated !== st.autoUpdated) {
+    out.push(L.autoUpdated(st.autoUpdated)); // once per update, not every session
+    shown.autoUpdated = st.autoUpdated;
+  } else if (latest && !st.autoUpdated && verNewer(latest, CFG.version) && (shown.version !== latest || Date.now() - (shown.at || 0) > 24 * 3600 * 1000)) {
     out.push(L.updateAvail(CFG.version, latest));
     shown.version = latest; shown.at = Date.now();
   }

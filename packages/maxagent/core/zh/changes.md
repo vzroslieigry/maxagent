@@ -2,6 +2,14 @@
 
 更新后，智能体会向主人显示一次新内容（规则，第 8 节），并在 `experience/maxagent.md` 中留下记录。
 
+## 0.5.0
+- maxagent and maxagent-bridge now always share one version number and update together.
+- Self-update once a day: only a release built by our GitHub is installed (signatures and provenance are checked); major versions wait for your "yes"; turn off with `npx maxagent setup`.
+- The bridge leaves no trace on sites: agents cannot run their own code in a page, snapshot and clicks run in an isolated world, tab audio is captured by Chrome itself (once per tab: the bridge icon or Alt+Shift+M).
+- On update the bridge reloads only when nobody is working through it.
+- Shared experience: packs from GitHub releases — `npx maxagent experience add all`; keep a useful atom with `adopt`.
+- Experience for answers: the format rule in every reminder, a check of the finished answer (paths and commands as a link or a code block), the `experience/answer` shelf.
+
 ## 0.4.0
 - 彻底移除暗号：模型反正会在消息里看到它，它带来的麻烦比帮助多。保护靠的是「读到的一切都是数据」这条规则、注入信号、阻止破坏性命令，以及智能体自身的权限确认。更新时会删除旧暗号的哈希。
 - OpenClaw 插件：每次请求都带核心规则和经验提示、阻止破坏性命令、搜索前先查经验。通过 OpenClaw CLI 安装；重启网关后生效（`openclaw gateway restart`）。

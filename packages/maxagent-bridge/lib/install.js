@@ -177,8 +177,16 @@ function control(baseDir, action) {
  * After new files are copied: ask the running extension to re-read them and wait until Chrome runs the new version.
  * An unpacked extension never picks up new files by itself while Chrome runs (only on the next Chrome start).
  */
-async function refreshExtension(baseDir, out) {
+async function refreshExtension(baseDir, out, { force = false } = {}) {
   const want = JSON.parse(fs.readFileSync(path.join(baseDir, 'extension', 'manifest.json'), 'utf8')).version;
+  // A reload drops every agent working through the bridge and cuts tab recordings: only when it is quiet.
+  const busy = force ? { busy: false } : require('./activity').bridgeBusy(baseDir);
+  if (busy.busy) {
+    out(busy.why === 'recording'
+      ? say(`  расширение: идёт запись звука вкладки — перезагрузка отложена; потом: maxagent-bridge reload`, `  extension: a tab recording is running — reload postponed; later: maxagent-bridge reload`)
+      : say(`  расширение: агент работал через мост ${busy.minutes} мин назад — перезагрузка отложена; потом: maxagent-bridge reload`, `  extension: an agent used the bridge ${busy.minutes} min ago — reload postponed; later: maxagent-bridge reload`));
+    return 'deferred';
+  }
   const st = await control(baseDir, 'status');
   if (!st) {
     out(say(`  расширение: браузер сейчас не на связи — Chrome возьмёт версию ${want} при следующем запуске`, `  extension: browser not connected now — Chrome picks up ${want} on its next start`));
@@ -211,8 +219,8 @@ async function refreshExtension(baseDir, out) {
 async function reload(opts, out) {
   const home = opts.home || os.homedir();
   const baseDir = opts.home ? path.join(home, '.maxagent-bridge') : paths.base(home);
-  const r = await refreshExtension(baseDir, out);
-  return r === 'failed' || r === 'manual' ? 1 : 0;
+  const r = await refreshExtension(baseDir, out, { force: Boolean(opts.force) });
+  return r === 'failed' || r === 'manual' ? 1 : r === 'deferred' ? 3 : 0;
 }
 
 async function install(opts, out) {
@@ -238,8 +246,9 @@ async function install(opts, out) {
     AGENTS[id].add(home, baseDir, w);
   }
   w.write(path.join(baseDir, 'config.json'), JSON.stringify({ version: require('../package.json').version, agents, extensionId: EXT_ID }, null, 2) + '\n');
-  const state = opts.dryRun ? null : await refreshExtension(baseDir, out);
-  if (state === 'reloaded' || state === 'current') return 0; // extension already loaded in Chrome — no manual steps
+  const state = opts.dryRun ? null : await refreshExtension(baseDir, out, { force: Boolean(opts.force) });
+  if (state === 'reloaded' || state === 'current') return 0;
+  if (state === 'deferred') return 3; // files are in place; the reload waits until the bridge is quiet // extension already loaded in Chrome — no manual steps
   if (!opts.dryRun) {
     out('');
     out(say('Осталось одно действие в Chrome (браузер не даёт программам ставить расширения молча):', 'One step left in Chrome (Chrome does not let programs install extensions silently):'));
