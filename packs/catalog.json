@@ -56,7 +56,7 @@
         "ru": "Скрипты Python и Node: аргументы, кодировки, heredoc, пакеты npm, установщики"
       },
       "url": "https://github.com/vzroslieigry/maxagent/releases/download/packs-python-node-1.0.0/python-node-1.0.0.json",
-      "sha256": "d1c95f21b1f78bdc181b45c9803323f60695d29e26278a1214985c00a0a684a6",
+      "sha256": "716b2a4590b510f8dca8df03e256383b1cb752d94945396c17e3cf3ea2c7f805",
       "size": 13846,
       "atoms": 11
     },
