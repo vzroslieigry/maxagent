@@ -80,7 +80,7 @@ async function selfUpdate(version, state, cfg) {
   const dir = path.join(STATE_DIR, 'update', version);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ private: true }));
-  let r = run(npmCmd, ['install', '--ignore-scripts', '--no-audit', '--no-fund', '--registry', REGISTRY, ...PACKAGES.map((p) => `${p}@${version}`)], { cwd: dir });
+  let r = run(npmCmd, ['install', '--prefer-online', '--ignore-scripts', '--no-audit', '--no-fund', '--registry', REGISTRY, ...PACKAGES.map((p) => `${p}@${version}`)], { cwd: dir });
   if (r.status !== 0) return (state.error = `npm install: ${String(r.stderr || '').slice(-300)}`), false;
   r = run(npmCmd, ['audit', 'signatures', '--registry', REGISTRY], { cwd: dir });
   if (r.status !== 0 || !/verified attestation/i.test(r.stdout)) return (state.error = 'signatures or provenance not verified — not installed'), false;
