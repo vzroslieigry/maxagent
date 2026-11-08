@@ -26,6 +26,23 @@ check(P.decide('click', 'act').allow && !P.decide('click', 'act').confirm, 'poli
 check(P.decide('click', 'confirm').confirm, 'policy: confirm agent → confirmation');
 check(P.decide('upload', 'act').confirm, 'policy: upload always confirmed');
 check(!P.decide('evaluate_js', 'act').allow, 'policy: unknown tool refused');
+check(P.decide('evaluate', 'act').allow && P.decide('evaluate', 'act').confirm, 'policy: page script → the owner is asked by default');
+check(!P.decide('evaluate', 'act', { scripts: true }).confirm, 'policy: page script without asking only when the owner switched it on');
+check(!P.decide('evaluate', 'read', { scripts: true }).allow, 'policy: read-only agent never runs page scripts');
+check(P.decide('evaluate', 'confirm', { scripts: true }).confirm, 'policy: "confirm" agent is asked even with scripts on');
+check(P.decide('record_tab_start', 'act').allow && !P.decide('record_tab_start', 'read').allow, 'policy: recording tab audio needs an act agent');
+{
+  const { saveRecording } = require('../lib/mcp');
+  const tmpA = fs.mkdtempSync(path.join(os.tmpdir(), 'maxagent-bridge-test-audio-'));
+  const rec = { base64: Buffer.from('webm-bytes').toString('base64'), size: 10, mimeType: 'audio/webm' };
+  let r = saveRecording(rec, path.join(tmpA, 'a.webm'));
+  check(r.ok && fs.readFileSync(path.join(tmpA, 'a.webm'), 'utf8') === 'webm-bytes' && !('base64' in r), 'record: .webm saved as is, no base64 back to the agent');
+  r = saveRecording(rec, path.join(tmpA, 'b.mp3'), { ffmpeg: path.join(tmpA, 'no-such-ffmpeg') });
+  check(!r.ok && /ffmpeg not found/.test(r.error) && fs.existsSync(path.join(tmpA, 'b.webm')) && !fs.existsSync(path.join(tmpA, 'b.mp3')), 'record: no ffmpeg → clear error, WebM kept (not a 0-byte mp3)', JSON.stringify(r));
+  r = saveRecording(rec);
+  check(r.ok && fs.existsSync(r.savedTo) && /maxagent-tab-audio-/.test(r.savedTo), 'record: no outputPath → a temp file, path returned');
+  try { fs.unlinkSync(r.savedTo); } catch { /* temp */ }
+}
 check(P.urlDenied('https://online.sberbank.ru/x') && P.urlDenied('https://accounts.google.com/') && P.urlDenied('https://www.paypal.com/'), 'policy: banks / sign-in / payments blocked by default');
 check(P.urlDenied('file:///C:/x') && P.urlDenied('chrome://settings'), 'policy: non-web pages refused');
 check(!P.urlDenied('https://github.com/') && !P.urlDenied('https://web.telegram.org/k/'), 'policy: ordinary sites allowed');

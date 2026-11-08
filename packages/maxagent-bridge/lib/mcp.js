@@ -135,6 +135,34 @@ function asContent(tool, result) {
   return [{ type: 'text', text: typeof result === 'string' ? result : JSON.stringify(result, null, 1) }];
 }
 
+/**
+ * The extension hands back the tab audio as WebM (base64). Save it to disk — never hand megabytes of base64 to the
+ * agent. .mp3/.wav go through ffmpeg; without ffmpeg (or if it fails) the WebM is kept and the agent is told so,
+ * instead of a silent 0-byte file. No outputPath → a temp file.
+ */
+function saveRecording(res, outputPath, { ffmpeg = process.env.MAXAGENT_FFMPEG || 'ffmpeg' } = {}) {
+  if (!res || !res.base64) return res;
+  const { base64, ...meta } = res;
+  const outPath = path.resolve(outputPath || path.join(require('os').tmpdir(), `maxagent-tab-audio-${Date.now()}.webm`));
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  const buf = Buffer.from(base64, 'base64');
+  const ext = path.extname(outPath).toLowerCase();
+  if (ext !== '.mp3' && ext !== '.wav') {
+    fs.writeFileSync(outPath, buf);
+    return { ...meta, ok: true, savedTo: outPath, sizeBytes: buf.length };
+  }
+  const webm = outPath.slice(0, -ext.length) + '.webm';
+  fs.writeFileSync(webm, buf);
+  const r = spawnSync(ffmpeg, ['-y', '-loglevel', 'error', '-i', webm, outPath], { encoding: 'utf8' });
+  const made = r.status === 0 && fs.existsSync(outPath) && fs.statSync(outPath).size > 0;
+  if (!made) {
+    const why = r.error && r.error.code === 'ENOENT' ? 'ffmpeg not found — install ffmpeg for .mp3/.wav' : `ffmpeg failed: ${String(r.stderr || r.error || '').trim().slice(0, 300)}`;
+    return { ...meta, ok: false, savedTo: webm, sizeBytes: buf.length, error: `${why}; the recording is kept as WebM` };
+  }
+  try { fs.unlinkSync(webm); } catch { /* the WebM next to it is harmless */ }
+  return { ...meta, ok: true, savedTo: outPath, sizeBytes: fs.statSync(outPath).size };
+}
+
 function runMcp({ agent = 'agent', input = process.stdin, output = process.stdout } = {}) {
   const link = new Link(agent);
   const send = (obj) => lineWrite(output, obj);
@@ -173,29 +201,7 @@ function runMcp({ agent = 'agent', input = process.stdin, output = process.stdou
         return { connected: false, reason: e.message };
       }
     }
-    if (name === 'record_tab_stop') {
-      const res = await link.call(name, args || {});
-      if (res && res.base64 && args && args.outputPath) {
-        const outPath = path.resolve(args.outputPath);
-        fs.mkdirSync(path.dirname(outPath), { recursive: true });
-        const buf = Buffer.from(res.base64, 'base64');
-        const ext = path.extname(outPath).toLowerCase();
-        if (ext === '.mp3' || ext === '.wav') {
-          const tmpWebm = path.join(path.dirname(outPath), `tmp_${Date.now()}.webm`);
-          fs.writeFileSync(tmpWebm, buf);
-          try {
-            spawnSync('ffmpeg', ['-y', '-i', tmpWebm, outPath], { stdio: 'ignore' });
-          } finally {
-            try { fs.unlinkSync(tmpWebm); } catch {}
-          }
-        } else {
-          fs.writeFileSync(outPath, buf);
-        }
-        const stat = fs.existsSync(outPath) ? fs.statSync(outPath) : null;
-        return { ok: true, savedTo: outPath, sizeBytes: stat ? stat.size : 0, originalSize: res.size };
-      }
-      return res;
-    }
+    if (name === 'record_tab_stop') return saveRecording(await link.call(name, args || {}), args && args.outputPath);
     if (!TOOLS.some((t) => t.name === name)) throw new Error(`unknown_tool: ${name}`);
     return link.call(name, args || {});
   }
@@ -232,4 +238,4 @@ function runMcp({ agent = 'agent', input = process.stdin, output = process.stdou
   input.on('end', () => process.exit(0));
 }
 
-module.exports = { runMcp, agentKey };
+module.exports = { runMcp, agentKey, saveRecording };

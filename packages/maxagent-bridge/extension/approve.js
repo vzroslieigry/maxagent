@@ -9,6 +9,8 @@ const T = RU ? {
   actionTitle: "Подтвердите действие агента",
   actionText: (r) => `<span class="who">${r.agent}</span>: ${r.tool}${r.site ? ` на ${r.site}` : ""}`,
   allow: "Разрешить", deny: "Запретить",
+  always: "Разрешать всегда",
+  alwaysWarn: "«Разрешать всегда» — агенты будут выполнять свой код на страницах без вопроса (выключить — в окне расширения). Не храните в этом браузере критические доступы: банк, платёжные карты, главная почта, пароли.",
 } : {
   pairTitle: "An agent asks for browser access",
   pairText: (a) => `<span class="who">${a}</span> wants to work in this browser: see tabs and pages and, if you allow, click and type. Your sign-ins stay yours.`,
@@ -19,6 +21,8 @@ const T = RU ? {
   actionTitle: "Confirm the agent's action",
   actionText: (r) => `<span class="who">${r.agent}</span>: ${r.tool}${r.site ? ` on ${r.site}` : ""}`,
   allow: "Allow", deny: "Deny",
+  always: "Always allow",
+  alwaysWarn: "\"Always allow\" — agents will run their own code in pages without asking (turn off in the extension popup). Do not keep critical access in this browser: bank, payment cards, main email, passwords.",
 };
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -41,7 +45,14 @@ const id = new URLSearchParams(location.search).get("id");
   } else {
     title.textContent = T.actionTitle;
     body.innerHTML = `<p>${T.actionText({ agent: esc(req.agent), tool: esc(req.tool), site: esc(req.site || "") })}</p>
-      ${req.detail ? `<div class="detail">${esc(req.detail)}</div>` : ""}<p class="warn">${T.warn}</p>`;
+      ${req.detail ? `<div class="detail">${esc(req.detail)}</div>` : ""}<p class="warn">${req.tool === "evaluate" ? T.alwaysWarn : T.warn}</p>`;
+    // Page scripts come in long series (a voice-over polls every few seconds): one click switches them on for good.
+    if (req.tool === "evaluate") {
+      const b = document.createElement("button");
+      b.textContent = T.always;
+      b.onclick = () => chrome.runtime.sendMessage({ type: "decision", id, answer: { allow: true, always: true } });
+      document.getElementById("allow").after(b);
+    }
   }
   const answer = (allow) => {
     const rights = req.kind === "pair" ? document.querySelector('input[name="r"]:checked').value : undefined;

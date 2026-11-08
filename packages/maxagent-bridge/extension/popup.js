@@ -5,19 +5,29 @@ const T = RU ? {
   rights: { read: "чтение", act: "действия", confirm: "действия с подтверждением" },
   block: "Запретные сайты (по одному на строку, * — любые символы)", save: "Сохранить", log: "Журнал действий",
   install: "Выполните: npx maxagent-bridge install",
+  scriptsH: "Скрипты на страницах",
+  scripts: "Разрешить агентам выполнять свой код на страницах без вопроса — один раз для всех вызовов (выключено — спрашивать каждый раз).",
+  scriptsWarn: "Режим включён: агент без вопроса видит и делает всё на открытых страницах. Не храните в этом браузере критические доступы — банк, платёжные карты, главная почта, пароли.",
 } : {
   on: "Agents can connect", off: "No connection to maxagent-bridge", stop: "Stop", resume: "Resume",
   agents: "Agents", noAgents: "No agent has connected yet.", remove: "Remove",
   rights: { read: "read", act: "act", confirm: "act with confirmation" },
   block: "Blocked sites (one per line, * matches anything)", save: "Save", log: "Action log",
   install: "Run: npx maxagent-bridge install",
+  scriptsH: "Page scripts",
+  scripts: "Let agents run their own code in pages without asking — once for all calls (off — ask every time).",
+  scriptsWarn: "This mode is on: an agent sees and does anything on open pages without asking. Do not keep critical access in this browser — bank, payment cards, main email, passwords.",
 };
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 async function render() {
   const st = await chrome.runtime.sendMessage({ type: "status" });
-  const data = await chrome.storage.local.get(["stopped", "agents", "blocklist", "log"]);
+  const data = await chrome.storage.local.get(["stopped", "agents", "blocklist", "log", "allowScripts"]);
+  $("hScripts").textContent = T.scriptsH;
+  $("scriptsText").textContent = T.scripts;
+  $("scripts").checked = Boolean(data.allowScripts);
+  $("scriptsWarn").textContent = data.allowScripts ? T.scriptsWarn : "";
   $("dot").className = "dot" + (st.host.connected ? " on" : "");
   $("host").textContent = st.host.connected ? T.on : `${T.off}${st.host.error ? ` (${st.host.error})` : ""}. ${T.install}`;
   $("stop").textContent = data.stopped ? T.resume : T.stop;
@@ -48,6 +58,10 @@ async function render() {
 $("stop").onclick = async () => {
   const { stopped } = await chrome.storage.local.get("stopped");
   await chrome.storage.local.set({ stopped: !stopped });
+  render();
+};
+$("scripts").onchange = async () => {
+  await chrome.storage.local.set({ allowScripts: $("scripts").checked });
   render();
 };
 $("saveBlock").onclick = async () => {
