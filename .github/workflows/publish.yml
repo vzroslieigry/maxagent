@@ -33,6 +33,16 @@ jobs:
       # Trusted publishing needs a recent npm CLI.
       - run: npm install -g npm@latest
 
+      # test/packs.js needs the meaning-search model (same pinned versions as ci.yml).
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: model and libraries (pinned, sha256)
+        run: |
+          echo "MAXAGENT_VECTOR=$RUNNER_TEMP/vector" >> "$GITHUB_ENV"
+          python -m pip install -q --disable-pip-version-check --target "$RUNNER_TEMP/vector/py" onnxruntime==1.31.0 tokenizers==0.23.3
+          python scripts/fetch-model.py "$RUNNER_TEMP/vector"
+
       - name: tests before publishing
         run: |
           (cd packages/maxagent && node test/run.js && node test/hooks.js && node test/packs.js)
