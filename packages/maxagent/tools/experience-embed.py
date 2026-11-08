@@ -87,6 +87,12 @@ def serve(port, idle=3600):
 
 
 def main():
+    # Any console (Windows cp1252/cp866, a pipe): output is always UTF-8 — the callers read it as UTF-8.
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding='utf-8')
+        except (AttributeError, ValueError):
+            pass
     if '--serve' in sys.argv:
         serve(int(sys.argv[sys.argv.index('--serve') + 1]))
         return

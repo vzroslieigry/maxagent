@@ -11,9 +11,8 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: packs-catalog
-  cancel-in-progress: false
+# No concurrency group: GitHub keeps only ONE pending run per group and cancels the rest, so several
+# tags at once lost their releases (08.11.2026). The catalog step below retries on a race instead.
 
 env:
   # Must match packages/maxagent/lib/extras.js (MODEL, PY_PACKAGES).
@@ -97,9 +96,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout main
-          git pull --ff-only origin main
-          node scripts/make-catalog.js
-          git add packs/catalog.json
-          if git diff --cached --quiet; then echo "catalog unchanged"; exit 0; fi
-          git commit -m "packs: ${{ steps.tag.outputs.name }} ${{ steps.tag.outputs.version }} in the catalog"
-          git push origin main
+          # Other pack releases may push the catalog at the same time: rebuild on the fresh main and retry.
+          for i in 1 2 3 4 5 6; do
+            git fetch -q origin main && git reset -q --hard origin/main
+            node scripts/make-catalog.js
+            git add packs/catalog.json
+            if git diff --cached --quiet; then echo "catalog unchanged"; exit 0; fi
+            git commit -q -m "packs: ${{ steps.tag.outputs.name }} ${{ steps.tag.outputs.version }} in the catalog"
+            if git push -q origin main; then exit 0; fi
+            sleep $((i * 5))
+          done
+          echo "catalog push failed after retries"; exit 1
