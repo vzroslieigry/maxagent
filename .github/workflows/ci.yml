@@ -72,7 +72,7 @@ jobs:
           (cd packages/maxagent-bridge && npm pack --silent --pack-destination "$work/pkg")
           cd "$work"
           echo '{"private":true}' > package.json
-          npm install --ignore-scripts --no-audit --no-fund pkg/*.tgz
+          npm install --ignore-scripts --no-audit --no-fund ./pkg/*.tgz
           node node_modules/maxagent/bin/maxagent.js init --home "$work/home" --yes --lang en --workspace "$work/home/ws" --no-extras
           test -f "$work/home/.maxagent/config.json"
           test -f "$work/home/ws/AGENTS.md"
