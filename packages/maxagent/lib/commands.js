@@ -276,6 +276,7 @@ async function init(opts, io) {
       lang,
       workspace,
       agents,
+      seenAgents: [...new Set([...found, ...agents])],
       hooks: !opts.noHooks,
       repo: s.repo,
       bridge: s.bridge,
@@ -369,6 +370,12 @@ async function update(opts, io) {
   if (!cfg) return 1;
   const from = cfg.version;
   if (opts.agents) cfg.agents = opts.agents.split(',').map((s) => s.trim()).filter((s) => ADAPTERS[s]);
+  else {
+    // An agent installed since the last run (or newly supported) joins by itself; one the owner left out once stays out.
+    const seen = cfg.seenAgents || Object.keys(ADAPTERS).filter((id) => id !== 'hermes');
+    for (const id of detectAgents(home)) if (!seen.includes(id) && !cfg.agents.includes(id)) { cfg.agents.push(id); io.out(`  + ${ADAPTERS[id].title}`); }
+  }
+  cfg.seenAgents = [...new Set([...(cfg.seenAgents || []), ...detectAgents(home), ...cfg.agents])];
   cfg.version = PKG.version;
   cfg.updatedAt = new Date().toISOString();
   if (opts.dryRun) io.out(t(cfg.lang, 'dryRun'));

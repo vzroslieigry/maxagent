@@ -5,7 +5,7 @@
 //                          experience hint for this message (prependContext). Needs hooks.allowConversationAccess.
 //   before_tool_call    → exec / web_search / web_fetch through the hook's pretool: destructive commands,
 //                          fiddling with Chrome processes → { block, blockReason }; experience is only a memory:
-//   tool_result_persist → that memory is added to the result of the same tool call (no field for it before a tool).
+//   tool-result middleware → that memory, experience after an error, a lint of written experience reach the model with the result.
 //   before_agent_finalize → one more pass only if something is really missing ({ action: 'revise' }, stopHookActive guards it).
 // A failing hook never breaks the agent: no output → no decision (before_tool_call fails closed only on a throw).
 
@@ -38,14 +38,21 @@ export function promptContext(event, ctx) {
 
 const memories = new Map();
 
-export function withMemory(event) {
-  const id = event && event.toolCallId;
-  const text = id && memories.get(id);
-  if (!text) return undefined;
-  memories.delete(id);
-  const m = event.message || {};
-  const content = Array.isArray(m.content) ? m.content : [{ type: 'text', text: String(m.content || '') }];
-  return { message: { ...m, content: [...content, { type: 'text', text }] } };
+const resultText = (result) => (Array.isArray(result && result.content) ? result.content.filter((c) => c && c.type === 'text').map((c) => c.text).join('\n') : '');
+
+/** Runs before the result goes back to the model: the memory from before the call, experience after an error, a lint of written experience. */
+export function resultGate(event, ctx) {
+  const notes = [];
+  if (event.toolCallId && memories.has(event.toolCallId)) { notes.push(memories.get(event.toolCallId)); memories.delete(event.toolCallId); }
+  try {
+    const out = runHook('posttool', { session_id: (ctx && ctx.sessionKey) || 'openclaw', tool_name: String(event.toolName || ''), tool_input: event.args || {}, tool_response: resultText(event.result) });
+    const o = out ? JSON.parse(out) : null;
+    if (o && o.decision === 'block' && o.reason) notes.push(o.reason);
+    else if (o && o.hookSpecificOutput && o.hookSpecificOutput.additionalContext) notes.push(o.hookSpecificOutput.additionalContext);
+  } catch { /* not a decision */ }
+  if (!notes.length) return undefined;
+  const r = event.result || {};
+  return { result: { ...r, content: [...(Array.isArray(r.content) ? r.content : []), { type: 'text', text: notes.join('\n\n') }] } };
 }
 
 export function finalizeGate(event, ctx) {
@@ -97,8 +104,8 @@ export default {
   configSchema: emptyConfigSchema,
   register(api) {
     api.on('before_prompt_build', (event, ctx) => promptContext(event, ctx));
-    api.on('before_tool_call', (event, ctx) => toolGate(event, ctx), { matcher: ['exec', 'web_search', 'web_fetch'] });
-    api.on('tool_result_persist', (event) => withMemory(event));
+    api.on('before_tool_call', (event, ctx) => toolGate(event, ctx), { matcher: ['exec', 'web_search', 'web_fetch', 'browser'] });
+    if (api.registerAgentToolResultMiddleware) api.registerAgentToolResultMiddleware((event, ctx) => resultGate(event, ctx), { runtimes: ['openclaw', 'codex'], matcher: ['exec', 'web_search', 'web_fetch', 'write', 'edit', 'apply_patch'] });
     api.on('before_agent_finalize', (event, ctx) => finalizeGate(event, ctx));
   },
 };

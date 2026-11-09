@@ -2,6 +2,9 @@
 
 更新后，智能体会向主人显示一次新内容（规则，第 8 节），并在 `experience/maxagent.md` 中留下记录。
 
+## 0.5.11
+- OpenClaw 和 Hermes 与其他智能体同等：经验在命令前后送达模型，写入的经验会被检查，选择桥接后内置浏览器关闭；更新时自动接入新智能体。
+
 ## 0.5.10
 - Hermes 已接入 maxagent：规则和经验通过插件提供，可使用浏览器桥接。现有安装：`npx maxagent update --agents <你的智能体>,hermes`。
 

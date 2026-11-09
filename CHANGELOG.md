@@ -2,6 +2,10 @@
 
 maxagent and maxagent-bridge always share one version number and are released together.
 
+## 0.5.11
+
+- OpenClaw and Hermes on a par with the others: experience reaches the model before and after commands, written experience is checked, the built-in browser is off when the bridge is chosen; new agents join on update.
+
 ## 0.5.10
 
 - Hermes joins maxagent: rules and experience come through a plugin, the browser bridge is available. For an existing install: `npx maxagent update --agents <your agents>,hermes`.

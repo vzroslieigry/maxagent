@@ -2,6 +2,9 @@
 
 O agente mostra ao dono as novidades uma vez depois de uma atualização (regras, seção 8) e deixa uma nota em `experience/maxagent.md`.
 
+## 0.5.11
+- OpenClaw e Hermes no nível dos outros: a experiência chega ao modelo antes e depois dos comandos, o que é escrito é verificado, o navegador integrado fica desligado com a ponte; novos agentes entram na atualização.
+
 ## 0.5.10
 - Hermes se conecta ao maxagent: regras e experiência vêm por um plugin e a ponte do navegador fica disponível. Instalação existente: `npx maxagent update --agents <seus agentes>,hermes`.
 

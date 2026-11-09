@@ -3,7 +3,7 @@
 #   system prompt section → core rules, once per session
 #   pre_llm_call          → experience for this message
 #   pre_tool_call         → destructive commands are blocked; experience is only a memory
-#   transform_tool_result → that memory is added to the result of the same tool call
+#   transform_tool_result → that memory, experience after an error, a lint of written experience join the result
 #   pre_verify            → one more pass after code edits, only if something is really missing
 # A failing hook never breaks the agent: no output means no decision.
 import json
@@ -13,6 +13,7 @@ from pathlib import Path
 
 HOOK = Path.home() / ".maxagent" / "hooks" / "maxagent-hook.js"
 TOOLS = {"terminal": "terminal", "web_search": "web_search", "web_extract": "web_fetch"}
+AFTER = {"terminal", "write_file", "patch"}
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 memories = {}
 
@@ -53,7 +54,7 @@ def on_prompt(session_id="", user_message="", **_):
 
 
 def on_tool(tool_name="", args=None, session_id="", task_id="", turn_id="", tool_call_id="", **_):
-    name = TOOLS.get(tool_name)
+    name = TOOLS.get(tool_name) or (tool_name if tool_name.startswith("browser_") else None)
     if not name:
         return None
     args = args or {}
@@ -75,12 +76,23 @@ def on_tool(tool_name="", args=None, session_id="", task_id="", turn_id="", tool
     return None
 
 
-def with_memory(result=None, tool_call_id="", **_):
-    text = memories.pop(tool_call_id, None)
-    if not text:
-        return None
+def with_memory(result=None, tool_call_id="", tool_name="", args=None, session_id="", task_id="", **_):
+    notes = [memories.pop(tool_call_id)] if tool_call_id in memories else []
     body = result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)
-    return f"{body}\n\n{text}"
+    if tool_name in AFTER:
+        out = parsed(run_hook("posttool", {
+            "session_id": session_id or task_id or "hermes",
+            "tool_name": tool_name,
+            "tool_input": args or {},
+            "tool_response": body,
+        }, timeout=10)) or {}
+        if out.get("decision") == "block" and out.get("reason"):
+            notes.append(out["reason"])
+        elif (out.get("hookSpecificOutput") or {}).get("additionalContext"):
+            notes.append(out["hookSpecificOutput"]["additionalContext"])
+    if not notes:
+        return None
+    return "\n\n".join([body, *notes])
 
 
 def on_verify(session_id="", attempt=0, final_response="", **_):

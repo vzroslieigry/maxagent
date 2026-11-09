@@ -217,6 +217,11 @@ check(agMem && agMem.decision === 'allow', 'Antigravity: experience before an ac
 out = parsed(hook('antigravity', 'invocation', { invocationNum: 3, conversationId: 'agm' }));
 check(out && out.injectSteps && /Выполнить команду на этом ПК/.test(out.injectSteps[0].ephemeralMessage), 'Antigravity: the memory arrives with the next model call', JSON.stringify(out));
 check(hook('antigravity', 'invocation', { invocationNum: 4, conversationId: 'agm' }) === '{}', 'Antigravity: the memory is not repeated');
+// OpenClaw and Hermes: the same checks under their own tool names.
+out = parsed(hook('openclaw', 'posttool', { session_id: 'oc1', tool_name: 'exec', tool_input: { command: 'a && b' }, tool_response: "ParserError: The token '&&' is not a valid statement separator in this version." }));
+check(out && /Выполнить команду/.test(out.hookSpecificOutput.additionalContext), 'OpenClaw: experience after a failed exec', JSON.stringify(out));
+out = parsed(hook('hermes', 'posttool', { session_id: 'hm1', tool_name: 'terminal', tool_input: { command: 'a && b' }, tool_response: "ParserError: The token '&&' is not a valid statement separator in this version." }));
+check(out && /Выполнить команду/.test(out.hookSpecificOutput.additionalContext), 'Hermes: experience after a failed terminal call', JSON.stringify(out));
 // An experience file written in the wrong format → lint errors go back to the agent at once.
 fs.writeFileSync(path.join(ws, 'experience', 'bad.md'), '---\ntitle: x\naliases: y\n---\n\n### Плохой атом\n- просят: не подтверждено\n- источник: разметка07.11\n');
 out = parsed(hook('claude-code', 'posttool', { session_id: 'act4', tool_name: 'Write', tool_input: { file_path: path.join(ws, 'experience', 'bad.md') }, tool_response: 'ok' }));

@@ -642,14 +642,14 @@ function doneCheck(input) {
 
 /* ---------- browser: the owner's own Chrome through maxagent-bridge (only when the bridge is chosen) ---------- */
 
-const BUILT_IN_BROWSER = /^mcp__(Claude_Browser|claude-in-chrome)__/;
+const BUILT_IN_BROWSER = /^mcp__(Claude_Browser|claude-in-chrome)__|^browser$|^browser_/;
 const CHROME_CMD = /(tasklist|Get-Process|Win32_Process|Get-CimInstance|wmic|taskkill|Stop-Process|Start-Process|pkill|killall|pgrep)[^\n]*chrome|chrome[^\n]*(Stop-Process|taskkill)|(^|[&;|]\s*)(&\s*|start\s+(""\s+)?|open\s+-a\s+)?("[^"\n]*chrome(\.exe)?"|'[^'\n]*chrome(\.exe)?'|[^\s"'&;|]*(chrome\.exe|google-chrome(-stable)?)\b)/i;
 const CHROME_OK = /not-owner-browser|--headless|--user-data-dir|--new-window|playwright|puppeteer|maxagent-bridge/i;
 const BRIDGE_DOWN = /browser_not_connected|browser_disconnected|"connected":\s*false/;
 
 function browserPretool(tool, command) {
   if (!CFG.bridge) return null;
-  if (BUILT_IN_BROWSER.test(tool)) return deny(L.browserBuiltIn(tool.split('__')[1]));
+  if (BUILT_IN_BROWSER.test(tool)) return deny(L.browserBuiltIn(tool.split('__')[1] || tool));
   if (command && CHROME_CMD.test(command) && !CHROME_OK.test(command)) return deny(L.browserProc);
   return null;
 }
@@ -668,8 +668,8 @@ function posttool(input) {
   if (/^mcp__maxagent-bridge__/.test(tool)) return BRIDGE_DOWN.test(resp) ? ctx(L.bridgeDown) : null;
   if (!ENG) return null;
   const ti = input.tool_input || {};
-  const file = ti.file_path || ti.notebook_path || '';
-  if (/^(Write|Edit|MultiEdit|NotebookEdit|apply_patch)$/.test(tool) && ENG.inLibrary(file, ENG.libraryRoot(CFG))) {
+  const file = ti.file_path || ti.notebook_path || ti.path || '';
+  if (/^(Write|Edit|MultiEdit|NotebookEdit|apply_patch|write|edit|write_file|patch)$/.test(tool) && ENG.inLibrary(file, ENG.libraryRoot(CFG))) {
     let text = '';
     try { text = fs.readFileSync(file, 'utf8'); } catch { return null; }
     const errs = [...ENG.lint(text, path.basename(file)), ...(ENG.lintProjects ? ENG.lintProjects(text, file, ENG.libraryRoot(CFG)) : [])];
@@ -679,7 +679,7 @@ function posttool(input) {
   // Only the error itself: stdout of a successful command may quote anything (even experience text).
   const tr = input.tool_response;
   const errText = tr && typeof tr === 'object' ? String(tr.stderr || tr.error || '') : resp;
-  if (/^(Bash|PowerShell|shell|exec_command|run_command)$/i.test(tool) && errText && ERROR_RE.test(errText)) {
+  if (/^(Bash|PowerShell|shell|exec_command|run_command|exec|terminal)$/i.test(tool) && errText && ERROR_RE.test(errText)) {
     const atom = ENG.actionRecall(errText.slice(0, 3000), input.session_id || 'default');
     if (atom) return ctx(L.actionAtom(atom));
   }
