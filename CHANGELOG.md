@@ -2,6 +2,10 @@
 
 maxagent and maxagent-bridge always share one version number and are released together.
 
+## 0.5.5
+
+- The fast `snapshot` answers in short lines instead of JSON — the screen takes several times less.
+
 ## 0.5.4
 
 - A new agent knows the fast snapshot and pixel click from the start; a big `snapshot` suggests the fast mode itself; on a bridge error look at a screenshot first.

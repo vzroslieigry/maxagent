@@ -7,7 +7,7 @@ const HOST = "com.maxagent.bridge";
 // Версия КОДА (не манифеста): по ней установщик видит, что Chrome действительно загрузил новый скрипт.
 // Chrome после перезапуска перечитывает манифест, но может держать старый код фонового скрипта из кэша (05.11.2026).
 // Поднимать вместе с "version" в manifest.json.
-const CODE_VERSION = "0.5.4";
+const CODE_VERSION = "0.5.5";
 const P = globalThis.maxagentPolicy;
 const D = globalThis.maxagentDriver;
 const LOG_MAX = 300;
@@ -224,6 +224,7 @@ async function snapshot(tab, args) {
     const old = Object.keys(all).filter((k) => k.startsWith("snap:") && at - all[k].at > SNAP_TTL);
     if (old.length) await chrome.storage.session.remove(old);
     await chrome.storage.session.set({ [`snap:${tab.id}:${snapshotId}`]: { doc: documentId, at, sigs: signatures } });
+    if (args.viewport || args.query) return P.compactSnapshot({ tabId: tab.id, snapshotId }, page);
     const big = !args.viewport && !args.query && JSON.stringify(page).length > 30000;
     return { tabId: tab.id, snapshotId, capturedAt: new Date(at).toISOString(), ...(big ? { hint: "big page: next time use viewport=true (only the screen) or query (only matching elements)" } : {}), ...page };
   });

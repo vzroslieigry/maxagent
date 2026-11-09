@@ -28,6 +28,10 @@ check(P.decide('upload', 'act').confirm, 'policy: upload asks unless the owner r
 check(P.uploadGrantKey('a', 'x.com') !== P.uploadGrantKey('b', 'x.com') && P.uploadGrantKey('a', 'x.com') !== P.uploadGrantKey('a', 'y.com'), 'policy: an upload permission is per agent and per site');
 check(P.decide('click_at', 'act').allow && !P.decide('click_at', 'act').confirm && !P.decide('click_at', 'read').allow && P.decide('click_at', 'confirm').confirm, 'policy: click_at is an action like click');
 check(P.TAB_CONTENT_TOOLS.has('click_at'), 'policy: click_at respects blocked sites');
+{
+  const c = P.compactSnapshot({ tabId: 7, snapshotId: 'abc' }, { url: 'https://x.com/a', title: 'T', text: 'hello', elements: [{ elementId: 'e1', tag: 'a', name: 'Home', href: 'https://x.com/home', rect: {} }, { elementId: 'e2', tag: 'input', type: 'text', text: '', editable: true, value: 'v' }] });
+  check(/snapshotId abc/.test(c) && /^e1 a "Home" -> \/home$/m.test(c) && /^e2 input:text "" =v \[editable\]$/m.test(c) && /text: hello/.test(c), 'compact snapshot: id, role, name, link, value in one line', c);
+}
 check(!P.decide('evaluate_js', 'act').allow, 'policy: unknown tool refused');
 check(!P.decide('evaluate', 'act').allow && !require('../lib/tools').TOOLS.some((t) => t.name === 'evaluate'), "no tool runs the agent's own code in a page (owner's rule 08.11.2026)");
 {

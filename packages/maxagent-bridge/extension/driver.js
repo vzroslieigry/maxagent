@@ -90,7 +90,7 @@ function maxagentPageOperation(request) {
         const t = walker.currentNode;
         const value = (t.nodeValue || "").trim();
         const parent = t.parentElement;
-        if (!value || !parent || /^(SCRIPT|STYLE|NOSCRIPT)$/.test(parent.tagName)) continue;
+        if (!value || !parent || /^(SCRIPT|STYLE|NOSCRIPT)$/.test(parent.tagName) || parent.closest(selector)) continue; // listed elements carry their own text
         range.selectNodeContents(t);
         const b = range.getBoundingClientRect();
         if (b.width && b.height && b.bottom > 0 && b.right > 0 && b.top < innerHeight && b.left < innerWidth && getComputedStyle(parent).visibility !== "hidden") parts.push(value);

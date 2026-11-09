@@ -2,6 +2,9 @@
 
 O agente mostra ao dono as novidades uma vez depois de uma atualização (regras, seção 8) e deixa uma nota em `experience/maxagent.md`.
 
+## 0.5.5
+- O `snapshot` rápido responde em linhas curtas em vez de JSON: a tela ocupa várias vezes menos.
+
 ## 0.5.4
 - Um agente novo já conhece o `snapshot` rápido e o clique por pixels; um `snapshot` grande sugere o modo rápido; em erro da ponte, olhar primeiro uma captura.
 
