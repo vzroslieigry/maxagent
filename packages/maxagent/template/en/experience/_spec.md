@@ -97,3 +97,5 @@ node ~/.maxagent/tools/experience-index.js
 ```
 
 The meaning-search threshold (`SIM_GATE` in the engine) depends on the library size: once there are many more atoms, run the requests you need and unrelated phrases through `node ~/.maxagent/tools/experience-engine.js explain "<phrase>"`. Unrelated ones must be below the threshold, the needed ones above.
+
+An atom about a private project lives in `experience/projects/<project>/`; outside it the project name is not written (check E060). Other spellings — lines of `experience/projects/<project>/_names.txt`.

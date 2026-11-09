@@ -645,7 +645,7 @@ function posttool(input) {
   if (/^(Write|Edit|MultiEdit|NotebookEdit|apply_patch)$/.test(tool) && ENG.inLibrary(file, ENG.libraryRoot(CFG))) {
     let text = '';
     try { text = fs.readFileSync(file, 'utf8'); } catch { return null; }
-    const errs = ENG.lint(text, path.basename(file));
+    const errs = [...ENG.lint(text, path.basename(file)), ...(ENG.lintProjects ? ENG.lintProjects(text, file, ENG.libraryRoot(CFG)) : [])];
     if (!errs.length) return null;
     return { decision: 'block', reason: L.lintBad(path.basename(file), errs.slice(0, 12).map((e) => `строка ${e.line}: ${e.code} ${e.msg}`).join('\n')) };
   }

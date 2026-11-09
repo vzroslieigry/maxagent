@@ -549,13 +549,43 @@ function inLibrary(p, root = libraryRoot()) {
 
 /* ---------- CLI ---------- */
 
+/**
+ * E060: an atom outside experience/projects/<project>/ must not name a private project (owner's rule 09.11.2026).
+ * Projects = folders of experience/projects; other spellings = lines of projects/<project>/_names.txt.
+ */
+function projectNames(root) {
+  const base = path.join(root, 'projects');
+  let dirs = [];
+  try { dirs = fs.readdirSync(base, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name); } catch { return []; }
+  return dirs.map((d) => {
+    let extra = [];
+    try { extra = fs.readFileSync(path.join(base, d, '_names.txt'), 'utf8').split(/\r?\n/).map((x) => x.trim()).filter(Boolean); } catch { /* optional */ }
+    return { project: d, names: [d, d.replace(/-/g, ' '), ...extra] };
+  });
+}
+
+function lintProjects(text, file, root = libraryRoot()) {
+  if (!root) return [];
+  const rel = path.relative(root, file).replace(/\\/g, '/');
+  if (rel.startsWith('..') || /^(projects|shared)\//.test(rel)) return [];
+  const escape = (w) => w.split(/\s+/).map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, (c) => `\\${c}`)).join('[\\s-]*');
+  const errs = [];
+  for (const { project, names } of projectNames(root)) {
+    const rx = new RegExp(`(^|[^\\p{L}\\d])(${names.map(escape).join('|')})($|[^\\p{L}\\d])`, 'iu');
+    String(text).split(/\r?\n/).forEach((line, i) => {
+      if (rx.test(line)) errs.push({ code: 'E060', line: i + 1, msg: `упомянут проект ${project}: перенести атом в experience/projects/${project}/ или убрать название` });
+    });
+  }
+  return errs;
+}
+
 function lintFiles(files, root, out) {
   let bad = 0;
   for (const f of files) {
     let text;
     try { text = fs.readFileSync(f, 'utf8'); } catch { continue; }
     const rel = path.relative(path.dirname(root || path.dirname(f)), f).replace(/\\/g, '/');
-    const errs = lint(text, path.basename(f));
+    const errs = [...lint(text, path.basename(f)), ...lintProjects(text, f, root || libraryRoot())];
     for (const e of errs) out(`${rel}:${e.line}: ${e.code} ${e.msg}`);
     bad += errs.length;
   }
@@ -612,6 +642,6 @@ async function main(argv) {
   return 2;
 }
 
-module.exports = { parse, lint, build, buildAnswer, answerRecall, buildShared, sharedPacks, sharedRecall, adoptedIds, config, stateDir, embedPassages, hashOf, passageOf, walk, search, recall, actionRecall, rows, queryVector, hasVectors, inLibrary, libraryRoot, stems, MAX_ATOM };
+module.exports = { parse, lint, lintProjects, projectNames, build, buildAnswer, answerRecall, buildShared, sharedPacks, sharedRecall, adoptedIds, config, stateDir, embedPassages, hashOf, passageOf, walk, search, recall, actionRecall, rows, queryVector, hasVectors, inLibrary, libraryRoot, stems, MAX_ATOM };
 
 if (require.main === module) main(process.argv.slice(2)).then((c) => { process.exitCode = c; }, (e) => { process.stderr.write(String(e && e.stack || e) + '\n'); process.exitCode = 1; });
