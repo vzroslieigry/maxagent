@@ -12,9 +12,21 @@ Put the atoms you want to share in one folder, then run:
 npx maxagent experience share <folder> --name <pack-name> --title "What this pack is about"
 ```
 
-It checks the format, secrets, planted commands and anything personal (home folders, e-mail addresses, internal IPs, your user and computer names). If something is found, it lists the lines and writes nothing. If all is clean, it creates `maxagent-pack-<pack-name>/packs/src/<pack-name>/`.
+It sorts atoms one by one and writes a draft with `SHARE-REPORT.md`: what fits, what must be rewritten and why, what is left out. Folders `owner`, `projects`, `answer` are never taken. **The command sends nothing anywhere.**
 
-**Nothing is sent anywhere by this command.** Read the files yourself: the check cannot understand context, such as a client's name in plain words.
+A pack holds only what is useful to anyone. An atom stays if all of these are true:
+- it names a public tool, error or technique;
+- a stranger can repeat the steps knowing nothing about you or your computer;
+- it is knowledge about the tool, not about someone's setup or arrangements;
+- it says what was verified.
+
+Replace anything personal with a placeholder (`<project folder>`). If the tip loses its point without it, delete the atom. The easiest way is to ask your agent: "prepare an experience pack about ffmpeg". Then the final, strict check:
+
+```
+npx maxagent experience share --check <pack folder>
+```
+
+A program cannot tell that a client or private project name is personal, so read the result yourself.
 
 ## 2. Send
 

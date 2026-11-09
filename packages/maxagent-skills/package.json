@@ -1,0 +1,23 @@
+{
+  "name": "maxagent-skills",
+  "version": "0.0.1",
+  "description": "Modular agent skills and workflows for maxagent.",
+  "license": "MIT",
+  "homepage": "https://github.com/vzroslieigry/maxagent#readme",
+  "bugs": {
+    "url": "https://github.com/vzroslieigry/maxagent/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vzroslieigry/maxagent.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "README.md",
+    "LICENSE"
+  ]
+}
