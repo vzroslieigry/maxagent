@@ -2,6 +2,9 @@
 
 Der Agent zeigt dem Besitzer nach einem Update einmal, was neu ist (Regeln, Abschnitt 8), und hinterlässt eine Notiz in `experience/maxagent.md`.
 
+## 0.5.4
+- Ein neuer Agent kennt von Anfang an den schnellen `snapshot` und den Pixelklick; ein großer `snapshot` schlägt den schnellen Modus vor; bei Brückenfehlern zuerst einen Screenshot ansehen.
+
 ## 0.5.3
 - Brücke: `snapshot` kann nur den sichtbaren Bereich lesen und Elemente nach Wörtern suchen – auf großen Seiten viel kleinere Antworten.
 - Brücke: `click_at` klickt nach Pixeln eines Screenshots – für Player und Canvas.

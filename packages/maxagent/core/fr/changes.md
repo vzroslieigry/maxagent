@@ -2,6 +2,9 @@
 
 L’agent montre une fois au propriétaire les nouveautés après une mise à jour (règles, section 8) et laisse une note dans `experience/maxagent.md`.
 
+## 0.5.4
+- Un nouvel agent connaît dès le départ le `snapshot` rapide et le clic par pixels ; un grand `snapshot` suggère le mode rapide ; en cas d'erreur du pont, regarder d'abord une capture.
+
 ## 0.5.3
 - Pont : `snapshot` peut lire seulement ce qui est à l'écran et chercher des éléments par mots — réponses bien plus courtes sur les grandes pages.
 - Pont : `click_at` clique selon les pixels d’une capture, pour les lecteurs et les canvas.

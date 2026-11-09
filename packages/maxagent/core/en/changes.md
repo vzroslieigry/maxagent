@@ -2,6 +2,9 @@
 
 The agent shows the owner what's new once after an update (rules, section 8) and leaves a note in `experience/maxagent.md`.
 
+## 0.5.4
+- A new agent knows the fast snapshot and pixel click from the start; a big `snapshot` suggests the fast mode itself; on a bridge error look at a screenshot first.
+
 ## 0.5.3
 - Bridge: `snapshot` can read only what is on the screen and search elements by words — many times smaller answers on big pages.
 - Bridge: `click_at` clicks by pixels of a screenshot — for players and canvas.

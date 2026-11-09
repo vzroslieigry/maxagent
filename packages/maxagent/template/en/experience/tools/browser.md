@@ -15,6 +15,30 @@ aliases: browser, Chrome, bridge, maxagent-bridge, mcp__maxagent-bridge, launch_
 - ловушка: anything irreversible (send, publish, pay) — only after the owner's "yes"
 - источник: maxagent experience, 2026
 
+### A big page: find what you need fast
+- когда: big page snapshot · snapshot too large · find a button on the page · viewport query click_at
+- вещь: maxagent-bridge · snapshot · screenshot · click_at
+1. `snapshot` with `viewport=true` — only what is on the screen; with `query` — only elements with these words. The answer is many times smaller.
+2. Without parameters `snapshot` returns the whole page.
+3. The element is not in the snapshot (player, canvas) — `screenshot`, then `click_at` by its pixels; a new screenshot before each click.
+- ловушка: `viewport=true` does not see what is below the screen: nothing found — scroll or search with `query`
+- источник: maxagent experience, 2026
+
+### A bridge error — look with your eyes first
+- когда: maxagent-bridge error · click did not work · element_not_visible · element covered · upload_chooser_did_not_open
+- вещь: maxagent-bridge · screenshot · full-screen capture
+1. First a `screenshot` of the tab: something may cover the place (banner, dialog, overlay).
+2. No cause found and a full-screen capture is allowed for this agent — capture the whole screen: Chrome and system windows do not get into a tab screenshot.
+- ловушка: a full-screen capture shows other windows too — look only for the cause, do not save or forward it
+- источник: maxagent experience, 2026
+
+### A hitch while working in the browser
+- когда: upload timeout · owner_denied_this_action · why so long · why the bridge failed
+- вещь: maxagent-bridge · feedback
+1. A hitch along the way (confirmation timeout, covered element, refusal) — tell the owner at once in one line what got stuck, and keep working.
+2. Asked "why so long" — a technical breakdown of the bottlenecks, no excuses.
+- источник: maxagent experience, 2026
+
 ### The bridge is not connected
 - когда: browser_not_connected · browser_disconnected · bridge did not answer · bridge is silent · browser is closed
 - когда: no mcp__maxagent-bridge tools · bridge not installed
