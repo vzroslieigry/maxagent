@@ -2,6 +2,10 @@
 
 maxagent and maxagent-bridge always share one version number and are released together.
 
+## 0.5.7
+
+- A normal `snapshot` now answers in short lines: the screen first, no empty backdrops or duplicates. The full JSON — `format="full"`.
+
 ## 0.5.6
 
 - Shared packs: downloads are retried on GitHub failures and one failed pack no longer stops the others; `doctor` no longer warns about pack headers.

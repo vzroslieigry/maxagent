@@ -2,6 +2,9 @@
 
 L’agent montre une fois au propriétaire les nouveautés après une mise à jour (règles, section 8) et laisse une note dans `experience/maxagent.md`.
 
+## 0.5.7
+- Le `snapshot` normal répond désormais en lignes courtes : l’écran d’abord, sans fonds vides ni doublons. JSON complet : `format="full"`.
+
 ## 0.5.6
 - Packs partagés : le téléchargement est relancé en cas d'échec de GitHub et un pack en échec n'arrête plus les autres ; `doctor` n'avertit plus sur les en-têtes des packs.
 

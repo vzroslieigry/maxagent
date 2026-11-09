@@ -19,7 +19,7 @@ aliases: browser, Chrome, bridge, maxagent-bridge, mcp__maxagent-bridge, launch_
 - когда: big page snapshot · snapshot too large · find a button on the page · viewport query click_at
 - вещь: maxagent-bridge · snapshot · screenshot · click_at
 1. `snapshot` with `viewport=true` — only what is on the screen; with `query` — only elements with these words. The answer is many times smaller.
-2. Without parameters `snapshot` returns the whole page.
+2. Without parameters `snapshot` gives short lines: what is on the screen first, up to 150 elements and 8 KB of text; the full JSON — `format="full"`.
 3. The element is not in the snapshot (player, canvas) — `screenshot`, then `click_at` by its pixels; a new screenshot before each click.
 - ловушка: `viewport=true` does not see what is below the screen: nothing found — scroll or search with `query`
 - источник: maxagent experience, 2026

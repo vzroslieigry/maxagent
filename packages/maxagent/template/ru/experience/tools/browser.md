@@ -19,7 +19,7 @@ aliases: браузер, Chrome, мост, maxagent-bridge, mcp__maxagent-bridge
 - когда: большая страница snapshot · snapshot слишком большой · найти кнопку на странице · viewport query click_at
 - вещь: maxagent-bridge · snapshot · screenshot · click_at
 1. `snapshot` с `viewport=true` — только то, что на экране; с `query` — только элементы с этими словами. Ответ в разы меньше.
-2. Без параметров `snapshot` отдаёт всю страницу.
+2. Без параметров `snapshot` — короткие строки: сначала то, что на экране, до 150 элементов и 8 КБ текста; полный JSON — `format="full"`.
 3. Элемента нет в снимке (плеер, холст) — `screenshot`, затем `click_at` по его пикселям; перед каждым кликом новый снимок экрана.
 - ловушка: `viewport=true` не видит то, что ниже экрана: не нашлось — прокрутить или искать через `query`
 - источник: опыт maxagent, 2026

@@ -70,17 +70,26 @@ function maxagentPageOperation(request) {
     const elements = [], frames = [], textParts = [];
     // Signatures go to the extension (it checks them before acting), never into the page.
     const signatures = {};
-    const maximum = limit(request.maxElements, 400, 2000);
-    const maxText = limit(request.maxText, 20000, 200000);
+    const light = request.full !== true; // short lines are the normal answer; the full JSON only on request
+    const maximum = limit(request.maxElements, light ? 150 : 400, 2000);
+    const maxText = limit(request.maxText, light ? 8000 : 20000, 200000);
     // Fast reading: only what is on the screen and/or only what matches the words the agent looks for.
     const onlyVisible = request.viewport === true;
     const query = String(request.query || "").toLowerCase().trim();
-    const light = onlyVisible || Boolean(query);
-    const slim = (d) => ({ elementId: d.elementId, tag: d.tag, role: d.role || undefined, name: compact(d.name, 120) || undefined,
+    const wholeText = !onlyVisible && !query;
+    const slim = (d) => ({ elementId: d.elementId, off: !d.inViewport || undefined, domId: d.domId || undefined, tag: d.tag, role: d.role || undefined, name: compact(d.name, 120) || undefined,
       text: compact(d.text, 120) || undefined, type: d.type || undefined, href: d.href || undefined, value: d.value || undefined,
       editable: d.editable || undefined, disabled: d.disabled || undefined,
       rect: { x: Math.round(d.rect.x), y: Math.round(d.rect.y), width: Math.round(d.rect.width), height: Math.round(d.rect.height) } });
     const matches = (d) => (!onlyVisible || d.inViewport) && (!query || [d.name, d.text, d.domId, d.href].some((v) => String(v || "").toLowerCase().includes(query)));
+    const title = (d) => compact(d.name || d.text, 120);
+    // Backdrops and empty containers: nothing to read, nothing to press.
+    const useful = (d) => Boolean(title(d) || d.editable || d.href || d.value || d.role || /^(button|input|select|textarea|summary)$/.test(d.tag));
+    // <ytcp-button><button>Same text</button></ytcp-button>: the inner one is what gets pressed.
+    const wrapped = (a, b) => title(a) && title(a) === title(b) && !a.href && a.rect.x <= b.rect.x + 1 && a.rect.y <= b.rect.y + 1
+      && a.rect.x + a.rect.width >= b.rect.x + b.rect.width - 1 && a.rect.y + a.rect.height >= b.rect.y + b.rect.height - 1;
+    const found = [];
+    let elementsMore = 0;
     const screenText = () => {
       if (!document.body) return "";
       const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
@@ -100,7 +109,7 @@ function maxagentPageOperation(request) {
     let truncated = false;
     const rootElementId = document.body ? "e0" : null;
     if (rootElementId) signatures.e0 = signature(document.body);
-    if (document.body && !light) textParts.push(document.body.innerText || document.body.textContent || "");
+    if (document.body && (wholeText || !light)) textParts.push(document.body.innerText || document.body.textContent || "");
     if (onlyVisible && !query) textParts.push(screenText());
     walk((node, id, path) => {
       if (node.tagName === "IFRAME" && rendered(node)) {
@@ -108,23 +117,34 @@ function maxagentPageOperation(request) {
         try { url = node.contentDocument?.documentElement ? node.contentWindow.location.href : null; } catch { url = null; }
         if (url) {
           frames.push({ elementId: id, url, readable: true });
-          if (!light) textParts.push(node.contentDocument.body?.innerText || "");
+          if (wholeText || !light) textParts.push(node.contentDocument.body?.innerText || "");
         } else frames.push({ elementId: id, url: node.getAttribute("src"), readable: false, reason: "cross_origin_or_unavailable" });
         signatures[id] = signature(node);
       }
       if (node.matches(selector) && rendered(node)) {
         const d = describe(node, id, path);
-        if (matches(d)) {
-          if (elements.length < maximum) { elements.push(light ? slim(d) : d); signatures[id] = signature(node); } else truncated = true;
+        if (light) { if (matches(d) && useful(d) && found.length < 5000) found.push({ d, node }); }
+        else if (matches(d)) {
+          if (elements.length < maximum) { elements.push(d); signatures[id] = signature(node); } else truncated = true;
         }
       }
       return true;
     });
+    if (light) {
+      const kept = [];
+      for (const item of found) {
+        const last = kept[kept.length - 1];
+        if (last && wrapped(last.d, item.d)) kept[kept.length - 1] = item; else kept.push(item);
+      }
+      kept.sort((a, b) => Number(b.d.inViewport) - Number(a.d.inViewport)); // what is on the screen comes first
+      elementsMore = Math.max(0, kept.length - maximum);
+      for (const { d, node } of kept.slice(0, maximum)) { elements.push(slim(d)); signatures[d.elementId] = signature(node); }
+    }
     const fullText = textParts.join("\n\n");
     return {
       documentId, url: location.href, title: document.title, rootElementId,
       text: fullText.slice(0, maxText), textLength: fullText.length, textTruncated: fullText.length > maxText,
-      elements, elementsTruncated: truncated || truncatedWalk, frames, signatures,
+      elements, elementsMore, elementsTruncated: truncated || truncatedWalk, frames, signatures,
       limitations: ["Closed shadow roots, canvas contents and cross-origin frames are not represented as DOM; use screenshot."],
     };
   }

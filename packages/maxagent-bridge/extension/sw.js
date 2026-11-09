@@ -7,7 +7,7 @@ const HOST = "com.maxagent.bridge";
 // Версия КОДА (не манифеста): по ней установщик видит, что Chrome действительно загрузил новый скрипт.
 // Chrome после перезапуска перечитывает манифест, но может держать старый код фонового скрипта из кэша (05.11.2026).
 // Поднимать вместе с "version" в manifest.json.
-const CODE_VERSION = "0.5.6";
+const CODE_VERSION = "0.5.7";
 const P = globalThis.maxagentPolicy;
 const D = globalThis.maxagentDriver;
 const LOG_MAX = 300;
@@ -217,16 +217,15 @@ async function elementRef(tabId, args) {
 
 async function snapshot(tab, args) {
   return D.withDebugger(tab.id, async (target) => {
-    const { documentId, signatures, ...page } = await D.evaluate(target, { action: "inspect", maxElements: args.maxElements, maxText: args.maxText, viewport: args.viewport, query: args.query });
+    const { documentId, signatures, ...page } = await D.evaluate(target, { action: "inspect", maxElements: args.maxElements, maxText: args.maxText, viewport: args.viewport, query: args.query, full: args.format === "full" });
     const snapshotId = crypto.randomUUID();
     const at = Date.now();
     const all = await chrome.storage.session.get(null);
     const old = Object.keys(all).filter((k) => k.startsWith("snap:") && at - all[k].at > SNAP_TTL);
     if (old.length) await chrome.storage.session.remove(old);
     await chrome.storage.session.set({ [`snap:${tab.id}:${snapshotId}`]: { doc: documentId, at, sigs: signatures } });
-    if (args.viewport || args.query) return P.compactSnapshot({ tabId: tab.id, snapshotId }, page);
-    const big = !args.viewport && !args.query && JSON.stringify(page).length > 30000;
-    return { tabId: tab.id, snapshotId, capturedAt: new Date(at).toISOString(), ...(big ? { hint: "big page: next time use viewport=true (only the screen) or query (only matching elements)" } : {}), ...page };
+    if (args.format !== "full") return P.compactSnapshot({ tabId: tab.id, snapshotId }, page);
+    return { tabId: tab.id, snapshotId, capturedAt: new Date(at).toISOString(), ...page };
   });
 }
 

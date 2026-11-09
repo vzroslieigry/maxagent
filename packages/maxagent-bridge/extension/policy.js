@@ -52,14 +52,20 @@
   /** A remembered upload permission belongs to one agent on one site. */
   function uploadGrantKey(agent, site) { return `${agent}\n${site}`; }
 
-  /** Fast snapshot as plain lines: a JSON of the same elements is several times longer. */
+  /** A snapshot as plain lines: a JSON of the same elements is ten times longer. */
   function compactSnapshot(head, page) {
     const origin = (() => { try { return new URL(page.url).origin; } catch { return ""; } })();
     const link = (h) => { let v = String(h || ""); if (origin && v.startsWith(origin)) v = v.slice(origin.length); return v.length > 80 ? `${v.slice(0, 80)}…` : v; };
     const line = (e) => [e.elementId, `${e.role || e.tag}${e.type ? `:${e.type}` : ""}`, `"${String(e.name || e.text || "").slice(0, 80)}"`,
-      e.value ? `=${String(e.value).slice(0, 60)}` : "", e.editable ? "[editable]" : "", e.disabled ? "[disabled]" : "", e.href ? `-> ${link(e.href)}` : ""].filter(Boolean).join(" ");
+      e.domId ? `#${e.domId}` : "", e.value ? `=${String(e.value).slice(0, 60)}` : "", e.editable ? "[editable]" : "", e.disabled ? "[disabled]" : "", e.href ? `-> ${link(e.href)}` : ""].filter(Boolean).join(" ");
+    const shown = page.elements.filter((e) => !e.off), below = page.elements.filter((e) => e.off);
+    const closed = (page.frames || []).filter((f) => !f.readable).length;
+    const left = (page.elementsMore || 0) + (page.elementsTruncated ? 1 : 0);
     return [`tabId ${head.tabId} snapshotId ${head.snapshotId}`, `${page.title || ""} | ${page.url}`,
-      ...page.elements.map(line), page.elementsTruncated ? "(more elements not shown)" : "", page.text ? `text: ${page.text}` : ""].filter(Boolean).join("\n");
+      ...shown.map(line), below.length ? "off the screen:" : "", ...below.map(line),
+      left ? `(${page.elementsMore || "more"} more elements: use query, or scroll and viewport=true)` : "",
+      closed ? `(${closed} frames are not readable: use screenshot)` : "",
+      page.text ? `text${page.textTruncated ? ` (first ${page.text.length} of ${page.textLength}; the rest: read e0)` : ""}: ${page.text}` : ""].filter(Boolean).join("\n");
   }
 
   /** Project chunk size: Native Messaging allows 64 MiB Chrome→host and 1 MiB host→Chrome. */

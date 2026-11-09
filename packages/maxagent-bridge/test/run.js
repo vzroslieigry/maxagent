@@ -31,6 +31,8 @@ check(P.TAB_CONTENT_TOOLS.has('click_at'), 'policy: click_at respects blocked si
 {
   const c = P.compactSnapshot({ tabId: 7, snapshotId: 'abc' }, { url: 'https://x.com/a', title: 'T', text: 'hello', elements: [{ elementId: 'e1', tag: 'a', name: 'Home', href: 'https://x.com/home', rect: {} }, { elementId: 'e2', tag: 'input', type: 'text', text: '', editable: true, value: 'v' }] });
   check(/snapshotId abc/.test(c) && /^e1 a "Home" -> \/home$/m.test(c) && /^e2 input:text "" =v \[editable\]$/m.test(c) && /text: hello/.test(c), 'compact snapshot: id, role, name, link, value in one line', c);
+  const big = P.compactSnapshot({ tabId: 7, snapshotId: 'abc' }, { url: 'https://x.com/', title: 'T', text: 'abc', textLength: 9000, textTruncated: true, elementsMore: 5, frames: [{ readable: false }], elements: [{ elementId: 'e3', tag: 'div', role: 'button', name: 'Below', domId: 'b1', off: true }, { elementId: 'e1', tag: 'button', name: 'Top' }] });
+  check(big.indexOf('e1 button') < big.indexOf('off the screen:') && big.indexOf('off the screen:') < big.indexOf('e3 button "Below" #b1') && /5 more elements/.test(big) && /1 frames are not readable/.test(big) && /first 3 of 9000; the rest: read e0/.test(big), 'compact snapshot: the screen first, what is left is named', big);
 }
 check(!P.decide('evaluate_js', 'act').allow, 'policy: unknown tool refused');
 check(!P.decide('evaluate', 'act').allow && !require('../lib/tools').TOOLS.some((t) => t.name === 'evaluate'), "no tool runs the agent's own code in a page (owner's rule 08.11.2026)");
