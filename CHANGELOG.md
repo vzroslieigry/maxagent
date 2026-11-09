@@ -2,6 +2,10 @@
 
 maxagent and maxagent-bridge always share one version number and are released together.
 
+## 0.5.10
+
+- Hermes joins maxagent: rules and experience come through a plugin, the browser bridge is available. For an existing install: `npx maxagent update --agents <your agents>,hermes`.
+
 ## 0.5.9
 
 - Install by an agent: the wizard no longer hangs or stays silent — it asks the owner everything through the agent and ends with a report of what is installed.

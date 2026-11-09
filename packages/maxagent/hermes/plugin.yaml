@@ -1,0 +1,8 @@
+name: maxagent
+version: "1.0"
+description: Core rules and experience hints in every session; destructive commands blocked.
+provides_hooks:
+  - pre_llm_call
+  - pre_tool_call
+  - transform_tool_result
+  - pre_verify

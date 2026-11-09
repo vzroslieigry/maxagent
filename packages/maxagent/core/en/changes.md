@@ -2,6 +2,9 @@
 
 The agent shows the owner what's new once after an update (rules, section 8) and leaves a note in `experience/maxagent.md`.
 
+## 0.5.10
+- Hermes joins maxagent: rules and experience come through a plugin, the browser bridge is available. For an existing install: `npx maxagent update --agents <your agents>,hermes`.
+
 ## 0.5.9
 - Install by an agent: the wizard no longer hangs or stays silent — it asks the owner everything through the agent and ends with a report of what is installed.
 

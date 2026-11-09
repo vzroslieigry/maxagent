@@ -2,6 +2,9 @@
 
 O agente mostra ao dono as novidades uma vez depois de uma atualização (regras, seção 8) e deixa uma nota em `experience/maxagent.md`.
 
+## 0.5.10
+- Hermes se conecta ao maxagent: regras e experiência vêm por um plugin e a ponte do navegador fica disponível. Instalação existente: `npx maxagent update --agents <seus agentes>,hermes`.
+
 ## 0.5.9
 - Instalação por um agente: o assistente não trava nem fica calado; pergunta tudo ao dono por meio do agente e termina com um relatório.
 

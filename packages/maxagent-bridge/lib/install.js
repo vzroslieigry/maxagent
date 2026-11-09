@@ -44,6 +44,14 @@ function readJson(file) {
   return text.trim() ? JSON.parse(text) : {};
 }
 
+/** Hermes keeps everything in one folder; a test home is never redirected. */
+function hermesHome(home) {
+  const real = path.resolve(home) === path.resolve(os.homedir());
+  if (real && process.env.HERMES_HOME) return process.env.HERMES_HOME;
+  if (real && process.platform === 'win32' && process.env.LOCALAPPDATA) return path.join(process.env.LOCALAPPDATA, 'hermes');
+  return path.join(home, '.hermes');
+}
+
 const AGENTS = {
   'claude-code': {
     title: 'Claude Code',
@@ -90,6 +98,30 @@ const AGENTS = {
       w.write(f, this.strip(old).replace(/^\n+/, ''), 'Codex MCP −');
     },
     has: (home) => { try { return fs.readFileSync(path.join(home, '.codex', 'config.toml'), 'utf8').includes('[mcp_servers.maxagent-bridge]'); } catch { return false; } },
+  },
+  hermes: {
+    title: 'Hermes',
+    detect: (home) => fs.existsSync(path.join(hermesHome(home), 'config.yaml')),
+    file: (home) => path.join(hermesHome(home), 'config.yaml'),
+    strip: (text) => text.replace(/\n?[ \t]*# maxagent-bridge:start[\s\S]*?# maxagent-bridge:end\n?/g, '\n'),
+    add(home, baseDir, w) {
+      const f = this.file(home);
+      const old = fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '';
+      const base = this.strip(old).replace(/\s*$/, '');
+      if (/^\s+maxagent-bridge:/m.test(base)) return; // already there, written by hand or by Hermes itself
+      const { command, args } = mcpCommand(baseDir, 'hermes');
+      const q = (x) => JSON.stringify(x); // YAML double-quoted strings accept JSON escapes
+      const entry = ['  # maxagent-bridge:start (npx maxagent-bridge uninstall removes this)', '  maxagent-bridge:', `    command: ${q(command)}`, `    args: [${args.map(q).join(', ')}]`, '  # maxagent-bridge:end'].join('\n');
+      const text = /^mcp_servers:[ \t]*$/m.test(base) ? base.replace(/^mcp_servers:[ \t]*$/m, () => `mcp_servers:\n${entry}`) : `${base}\n\nmcp_servers:\n${entry}`;
+      w.write(f, `${text}\n`, 'Hermes MCP');
+    },
+    remove(home, w) {
+      const f = this.file(home);
+      if (!fs.existsSync(f)) return;
+      const old = fs.readFileSync(f, 'utf8');
+      if (old.includes('# maxagent-bridge:start')) w.write(f, this.strip(old).replace(/\nmcp_servers:[ \t]*\n(?=\n|$|\S)/, '\n'), 'Hermes MCP −');
+    },
+    has(home) { try { return /^\s+maxagent-bridge:/m.test(fs.readFileSync(this.file(home), 'utf8')); } catch { return false; } },
   },
   antigravity: {
     title: 'Antigravity',

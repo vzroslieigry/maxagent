@@ -2,6 +2,9 @@
 
 Der Agent zeigt dem Besitzer nach einem Update einmal, was neu ist (Regeln, Abschnitt 8), und hinterlässt eine Notiz in `experience/maxagent.md`.
 
+## 0.5.10
+- Hermes ist an maxagent angebunden: Regeln und Erfahrung kommen per Plugin, die Browser-Brücke ist verfügbar. Bestehende Installation: `npx maxagent update --agents <deine Agenten>,hermes`.
+
 ## 0.5.9
 - Installation durch einen Agenten: Der Assistent hängt nicht mehr und schweigt nicht; er fragt alles über den Agenten und endet mit einem Bericht.
 

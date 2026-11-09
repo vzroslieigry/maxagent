@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { PKG_ROOT, readText } = require('./util');
+const { hermesHome } = require('./agents');
 
 const HOOK_FILE = 'maxagent-hook.js';
 const MARK = HOOK_FILE; // our registrations are recognised by this file name in the command
@@ -23,6 +24,12 @@ const HOOK_TARGETS = {
     file: (home) => path.join(home, '.gemini', 'config', 'hooks.json'),
     events: { PreInvocation: 'invocation', PreToolUse: 'pretool', Stop: 'stop' },
     level: 'partial',
+  },
+  // Hermes: a plugin too (hermes/), copied into its plugins folder and enabled through its CLI.
+  hermes: {
+    file: (home) => path.join(hermesHome(home), 'config.yaml'),
+    events: { plugin: 'plugin' },
+    level: 'openclaw',
   },
   // OpenClaw: not a hooks file but a plugin (openclaw/), linked and enabled through the OpenClaw CLI.
   openclaw: {
@@ -86,6 +93,26 @@ function applyOpenclaw(home, w, add, msg) {
     if (!r.ok) return;
   }
   w.note(`openclaw: ${msg('ocRestart')}`);
+}
+
+const HM_FILES = ['plugin.yaml', '__init__.py'];
+const hmDir = (home) => path.join(hermesHome(home), 'plugins', 'maxagent');
+function hmRun(home, verb) {
+  if (path.resolve(home) !== path.resolve(require('os').homedir())) return { skipped: true };
+  const own = path.join(hermesHome(home), 'bin', process.platform === 'win32' ? 'hermes.exe' : 'hermes');
+  const r = require('child_process').spawnSync(fs.existsSync(own) ? own : 'hermes', ['plugins', verb, 'maxagent'], { encoding: 'utf8', timeout: 240000, windowsHide: true, shell: !fs.existsSync(own) });
+  return { ok: r.status === 0, out: `${r.stdout || ''}${r.stderr || ''}`.trim().split(/\r?\n/).slice(-1)[0] };
+}
+function applyHermes(home, w, add) {
+  if (!add) {
+    if (!w.dry && fs.existsSync(hmDir(home))) { const r = hmRun(home, 'disable'); if (!r.skipped) w.note(`hermes plugins disable maxagent: ${r.ok ? 'OK' : `ERROR ${r.out}`}`); }
+    return;
+  }
+  for (const f of HM_FILES) w.write(path.join(hmDir(home), f), fs.readFileSync(path.join(PKG_ROOT, 'hermes', f), 'utf8'), 'hermes: plugin');
+  if (w.dry) return;
+  const r = hmRun(home, 'enable');
+  if (r.skipped) return;
+  w.note(r.ok ? 'hermes plugins enable maxagent: OK (restart Hermes)' : `hermes: enable it by hand: hermes plugins enable maxagent (${r.out})`);
 }
 
 const hookPath = (home) => path.join(home, '.maxagent', 'hooks', HOOK_FILE).replace(/\\/g, '/');
@@ -169,6 +196,7 @@ function applyHooks(cfg, home, w, add, msg) {
   }
   for (const agent of cfg.agents) {
     if (agent === 'openclaw') { applyOpenclaw(home, w, add, msg); continue; }
+    if (agent === 'hermes') { applyHermes(home, w, add); continue; }
     const target = HOOK_TARGETS[agent];
     if (!target) {
       w.note(`${agent}: ${msg('hooksNotYet')}`);
@@ -198,6 +226,7 @@ function registeredEvents(agent, home) {
     const files = OC_FILES.every((f) => fs.existsSync(path.join(ocDir(home), f)));
     return { bad: false, events: files && ocWired(home) ? ['plugin'] : [], want: ['plugin'] };
   }
+  if (agent === 'hermes') return { bad: false, events: HM_FILES.every((f) => fs.existsSync(path.join(hmDir(home), f))) ? ['plugin'] : [], want: ['plugin'] };
   const { ok, data } = readJsonFile(target.file(home));
   if (!ok) return { bad: true, events: [] };
   const events = [];

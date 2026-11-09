@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "maxagent bridge",
-  "version": "0.5.9",
+  "version": "0.5.10",
   "description": "Lets your AI agents use this browser through maxagent-bridge: you approve each agent, see every action, and can stop it at any time.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA7EP0J8IS76iKcf2quftBswV4mbRrSGEqLSIWsJ40k+K+Y4X++6R2V0a2Qu5x7lDEI1fXD3jjciJ80z+8FKvkcGUpM2UfhDjOR+rPeY3XcQp+nTv86zmzG11x8NntDrWDg+pT6jXBIiQoZ8VLKO8fCkFSmnY5xfWFBzYlvIG2R8J6OXCH3vDakhtVF6YEenMQwkztXuHs2SN86HmH2Ck5f+ldtR3cNZVlcMKc7AV/HvLDNsh+meO83b0zby7Yjzucn7x2Mwa430txYExuQzLEcWcLboisuW9iXHm7aP0uNY9+BlmZY/ew8BCFNEPAlKHXp93wgYzp+0RJtvpxTJ+VWwIDAQAB",
   "permissions": [

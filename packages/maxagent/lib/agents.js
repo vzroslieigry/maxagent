@@ -8,6 +8,14 @@ const path = require('path');
  * Verified against official docs on 2026-11-03 (projects/maxagent/sverka-agentov.md).
  * Every adapter returns the list of rules files to carry the maxagent block.
  */
+/** Hermes keeps everything in one folder: %LOCALAPPDATA%\\hermes on Windows, ~/.hermes elsewhere; a test home is never redirected. */
+function hermesHome(home) {
+  const real = path.resolve(home) === path.resolve(require('os').homedir());
+  if (real && process.env.HERMES_HOME) return process.env.HERMES_HOME;
+  if (real && process.platform === 'win32' && process.env.LOCALAPPDATA) return path.join(process.env.LOCALAPPDATA, 'hermes');
+  return path.join(home, '.hermes');
+}
+
 const ADAPTERS = {
   'claude-code': {
     title: 'Claude Code',
@@ -28,6 +36,11 @@ const ADAPTERS = {
     detect: (home) => fs.existsSync(path.join(home, '.gemini')),
     // ~/.gemini/AGENTS.md is always active and needs no frontmatter (config/rules/*.md would).
     rulesFiles: (home) => [path.join(home, '.gemini', 'AGENTS.md')],
+  },
+  hermes: {
+    title: 'Hermes',
+    detect: (home) => fs.existsSync(path.join(hermesHome(home), 'config.yaml')),
+    rulesFiles: () => [], // the plugin puts the rules into the system prompt
   },
   openclaw: {
     title: 'OpenClaw',
@@ -57,4 +70,4 @@ function detectAgents(home) {
   return Object.keys(ADAPTERS).filter((id) => ADAPTERS[id].detect(home));
 }
 
-module.exports = { ADAPTERS, detectAgents };
+module.exports = { ADAPTERS, detectAgents, hermesHome };

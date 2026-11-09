@@ -29,6 +29,25 @@ check(P.uploadGrantKey('a', 'x.com') !== P.uploadGrantKey('b', 'x.com') && P.upl
 check(P.decide('click_at', 'act').allow && !P.decide('click_at', 'act').confirm && !P.decide('click_at', 'read').allow && P.decide('click_at', 'confirm').confirm, 'policy: click_at is an action like click');
 check(P.TAB_CONTENT_TOOLS.has('click_at'), 'policy: click_at respects blocked sites');
 {
+  const os2 = require('os'), fs2 = require('fs'), path2 = require('path');
+  const { AGENTS } = require('../lib/install');
+  const h = fs2.mkdtempSync(path2.join(os2.tmpdir(), 'mx-hermes-'));
+  fs2.mkdirSync(path2.join(h, '.hermes'));
+  const f = path2.join(h, '.hermes', 'config.yaml');
+  fs2.writeFileSync(f, 'model:\n  default: x\n');
+  const w = { write: (file, text) => fs2.writeFileSync(file, text) };
+  AGENTS.hermes.add(h, 'C:/b', w);
+  const once1 = fs2.readFileSync(f, 'utf8');
+  AGENTS.hermes.add(h, 'C:/b', w);
+  check(AGENTS.hermes.detect(h) && AGENTS.hermes.has(h) && /^mcp_servers:$/m.test(once1) && fs2.readFileSync(f, 'utf8') === once1, 'Hermes MCP: added once, the second install changes nothing', once1);
+  fs2.writeFileSync(f, 'mcp_servers:\n  time:\n    command: uvx\n');
+  AGENTS.hermes.add(h, 'C:/b', w);
+  const both = fs2.readFileSync(f, 'utf8');
+  check(both.split('mcp_servers:').length === 2 && /  time:/.test(both) && AGENTS.hermes.has(h), 'Hermes MCP: goes under an existing mcp_servers, keeps the others', both);
+  AGENTS.hermes.remove(h, w);
+  check(!AGENTS.hermes.has(h) && /  time:/.test(fs2.readFileSync(f, 'utf8')), 'Hermes MCP: uninstall removes only our entry');
+}
+{
   const c = P.compactSnapshot({ tabId: 7, snapshotId: 'abc' }, { url: 'https://x.com/a', title: 'T', text: 'hello', elements: [{ elementId: 'e1', tag: 'a', name: 'Home', href: 'https://x.com/home', rect: {} }, { elementId: 'e2', tag: 'input', type: 'text', text: '', editable: true, value: 'v' }] });
   check(/snapshotId abc/.test(c) && /^e1 a "Home" -> \/home$/m.test(c) && /^e2 input:text "" =v \[editable\]$/m.test(c) && /text: hello/.test(c), 'compact snapshot: id, role, name, link, value in one line', c);
   const big = P.compactSnapshot({ tabId: 7, snapshotId: 'abc' }, { url: 'https://x.com/', title: 'T', text: 'abc', textLength: 9000, textTruncated: true, elementsMore: 5, frames: [{ readable: false }], elements: [{ elementId: 'e3', tag: 'div', role: 'button', name: 'Below', domId: 'b1', off: true }, { elementId: 'e1', tag: 'button', name: 'Top' }] });
