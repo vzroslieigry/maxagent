@@ -94,7 +94,9 @@ async function selfUpdate(version, state, cfg) {
   if (r.status !== 0) return (state.error = `maxagent update: ${String(r.stderr || r.stdout || '').slice(-300)}`), false;
   state.autoUpdated = version;
   // The bridge only where it is installed. Exit 3: files are in place, the extension reload waits for quiet.
-  if (fs.existsSync(path.join(bridgeBase(), 'config.json'))) {
+  // Never over a newer bridge (a local build ahead of the registry).
+  const installedBridge = readJson(path.join(bridgeBase(), 'app', 'package.json'), {}).version;
+  if (fs.existsSync(path.join(bridgeBase(), 'config.json')) && !newer(installedBridge, version)) {
     r = run(process.execPath, [path.join(dir, 'node_modules', 'maxagent-bridge', 'bin', 'maxagent-bridge.js'), 'install']);
     if (r.status === 3) state.bridgePending = version;
     else if (r.status !== 0) state.error = `maxagent-bridge install: ${String(r.stdout || '').slice(-300)}`;
