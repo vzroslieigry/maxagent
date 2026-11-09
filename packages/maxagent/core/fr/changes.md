@@ -2,6 +2,11 @@
 
 L’agent montre une fois au propriétaire les nouveautés après une mise à jour (règles, section 8) et laisse une note dans `experience/maxagent.md`.
 
+## 0.5.2
+- Les indications de l'expérience n'arrêtent plus les commandes ni les recherches : elles arrivent comme un souvenir.
+- À la fin d'une réponse, l'agent n'ajoute que ce qui manque vraiment.
+- Les skills installées de tous les agents sont retrouvées à la demande : une étagère personnelle, actualisée une fois par jour.
+
 ## 0.5.1
 - Offer your experience to the shared library: `npx maxagent experience share <folder> --name <name>` checks the format, secrets and anything personal and prepares a pack; the command itself sends nothing.
 - Self-update sees a fresh release at once.

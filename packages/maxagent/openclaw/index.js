@@ -4,7 +4,9 @@
 //   before_prompt_build → core rules into the cached system part (appendSystemContext) +
 //                          experience hint for this message (prependContext). Needs hooks.allowConversationAccess.
 //   before_tool_call    → exec / web_search / web_fetch through the hook's pretool: destructive commands,
-//                          fiddling with Chrome processes, experience before a web search → { block, blockReason }.
+//                          fiddling with Chrome processes → { block, blockReason }; experience is only a memory:
+//   tool_result_persist → that memory is added to the result of the same tool call (no field for it before a tool).
+//   before_agent_finalize → one more pass only if something is really missing ({ action: 'revise' }, stopHookActive guards it).
 // A failing hook never breaks the agent: no output → no decision (before_tool_call fails closed only on a throw).
 
 import { spawnSync } from 'node:child_process';
@@ -34,6 +36,31 @@ export function promptContext(event, ctx) {
   return out;
 }
 
+const memories = new Map();
+
+export function withMemory(event) {
+  const id = event && event.toolCallId;
+  const text = id && memories.get(id);
+  if (!text) return undefined;
+  memories.delete(id);
+  const m = event.message || {};
+  const content = Array.isArray(m.content) ? m.content : [{ type: 'text', text: String(m.content || '') }];
+  return { message: { ...m, content: [...content, { type: 'text', text }] } };
+}
+
+export function finalizeGate(event, ctx) {
+  const out = runHook('stop', {
+    session_id: (event && event.sessionKey) || (ctx && ctx.sessionKey) || 'openclaw',
+    stop_hook_active: Boolean(event && event.stopHookActive),
+    last_assistant_message: String((event && event.lastAssistantMessage) || ''),
+  });
+  try {
+    const o = out ? JSON.parse(out) : null;
+    if (o && o.decision === 'block' && o.reason) return { action: 'revise', reason: o.reason, retry: { instruction: o.reason, maxAttempts: 1 } };
+  } catch { /* not a decision */ }
+  return undefined;
+}
+
 export function toolGate(event, ctx) {
   const out = runHook('pretool', {
     session_id: (ctx && ctx.sessionKey) || 'openclaw',
@@ -46,6 +73,7 @@ export function toolGate(event, ctx) {
     const o = JSON.parse(out);
     const h = o && o.hookSpecificOutput;
     if (h && h.permissionDecision === 'deny') return { block: true, blockReason: h.permissionDecisionReason || 'maxagent' };
+    if (h && h.additionalContext && event && event.toolCallId) memories.set(event.toolCallId, h.additionalContext);
   } catch { /* not a decision */ }
   return undefined;
 }
@@ -70,5 +98,7 @@ export default {
   register(api) {
     api.on('before_prompt_build', (event, ctx) => promptContext(event, ctx));
     api.on('before_tool_call', (event, ctx) => toolGate(event, ctx), { matcher: ['exec', 'web_search', 'web_fetch'] });
+    api.on('tool_result_persist', (event) => withMemory(event));
+    api.on('before_agent_finalize', (event, ctx) => finalizeGate(event, ctx));
   },
 };

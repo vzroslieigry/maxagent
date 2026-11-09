@@ -20,7 +20,7 @@ const TXT = {
     projectHead: '[проект] Похоже на работу по проекту — карточка и активная задача:',
     stop: (did) => `[maxagent, опыт] За этот ход: ${did}, а опыт (experience/) не менялся. Опыт — повторяемое действие без поиска и ошибок. Если в этом ходе пришлось искать, что-то не сработало, хозяин дал правило или получился способ, который повторится, — запиши атом в experience/<вид>/<вещь>.md по experience/_spec.md (образец — experience/_template.md; такой атом уже есть — поправь его):\n### <задача словами просьбы>\n- когда: <просьба> · <команда/инструмент> · <текст ошибки>\n- вещь: <предмет> · <предмет>\n1. <шаг, команда>\n- проверка: <что должно получиться>\n- ловушка: не <так> — <почему>\n- источник: свой опыт, <дата>\nПроверь: node ~/.maxagent/tools/experience-engine.js lint <файл> → «ошибок нет»; find "<слова просьбы>" → атом наверху. Затем коммит. Записывать нечего — одной строкой скажи почему и заканчивай. Второй раз этот хук не остановит.`,
     lintBad: (file, list) => `[maxagent, опыт] ${file} не по формату атома (experience/_spec.md) — исправь сейчас, иначе он плохо найдётся и коммит не пройдёт:\n${list}`,
-    actionAtom: (a) => `[опыт перед действием — так у нас уже делалось; сверь и сделай по нему, затем повтори вызов: второй раз этот атом не остановит]\n(${a.file})\n${a.text}`,
+    actionAtom: (a) => `[опыт: так у нас уже делалось]\n(${a.file})\n${a.text}`,
     recallHeads: { sure: '[опыт — похоже, я так уже делал; сверь, подходит ли]', maybe: '[опыт — возможно, похожее; сверь, подходит ли]', also: 'Ещё похоже:', only: '[опыт — похожие случаи]' },
     answerRule: 'Ответ хозяину: что глянуть (файл, картинка, страница) — кликабельной ссылкой; что скопировать (путь, команда, готовый текст) — отдельным блоком кода. Не проверено — так и написать.',
     formatAsk: (list) => `[maxagent, ответ] Простым текстом остались: ${list.map((x) => `«${x}»`).join(', ')}. Ответ уже у хозяина — не повторяй его. Допиши только недостающее: что глянуть — список кликабельных ссылок [имя](путь) с пояснением в несколько слов; что скопировать — отдельным блоком кода.`,
@@ -31,7 +31,7 @@ const TXT = {
     adoptAsk: (head, id) => `[опыт] В этом ходе показывался чужой атом «${head}» (общий набор). Если он пригодился и сработал — сохрани его своим: node ~/.maxagent/tools/experience-packs.js adopt "${id}", при нужде поправь пути и проверь lint. Не пригодился — ничего не делай и заканчивай. Второй раз этот хук не остановит.`,
     did: { research: 'поиск/чтение в сети', shell: 'команды', edits: 'правки кода после проверки' },
     catastrophic: 'Команда может уничтожить систему или все данные (корень диска, домашняя папка, форматирование). Запрещено всегда — если это действительно нужно, хозяин выполнит сам.',
-    search: (rows) => `[опыт перед поиском] По словам запроса в опыте есть записи:\n${rows}\nСначала прочитай подходящие и делай по ним. Если в опыте ответа нет — повтори этот же поиск (второй раз в этом ходе хук пропустит), а найденное потом запиши в опыт.`,
+    search: (rows) => `[опыт по этому запросу]\n${rows}`,
     ask: (quote, rows) => `[опыт перед просьбой] Ты просишь хозяина сделать руками: «${quote}». В опыте есть записи об этом:\n${rows}\nПрочитай их: если там способ сделать это самому — сделай сам и не проси. Если без хозяина никак (его вход, пароль, решение, физическое действие) — оставь просьбу и заканчивай. Второй раз этот хук не остановит.`,
     done: (word, file) => `[maxagent, проверка] Ты пишешь «${word}», но после последней правки (${file}) ничего не запускал и результат не открывал. Проверь вживую (запусти, открой, посмотри) или прямо напиши хозяину, что не проверено. Второй раз этот хук не остановит.`,
     browserBuiltIn: (tool) => `[maxagent, браузер] Встроенный браузер агента (${tool}) запрещён настройкой хозяина: браузер — только его собственный Chrome через maxagent-bridge (инструменты mcp__maxagent-bridge__*: browser_status, tabs_list, snapshot, click, type…). Если их нет в списке — найди их поиском инструментов по слову maxagent-bridge.`,
@@ -50,7 +50,7 @@ const TXT = {
     projectHead: '[project] Looks like project work — card and active task:',
     stop: (did) => `[maxagent, experience] This turn: ${did}, but experience (experience/) did not change. Experience is a repeatable action without search and mistakes. If this turn needed a search, something failed, the owner gave a rule or you found a way that will repeat — write an atom to experience/<kind>/<thing>.md per experience/_spec.md (sample — experience/_template.md; if such an atom exists, fix it):\n### <task in the words of the request>\n- когда: <request> · <command/tool> · <error text>\n- вещь: <thing> · <thing>\n1. <step, command>\n- проверка: <expected result>\n- ловушка: not <this> — <why>\n- источник: own experience, <date>\nCheck: node ~/.maxagent/tools/experience-engine.js lint <file> → no errors; find "<request words>" → the atom on top. Then commit. Nothing to record — say why in one line and finish. This hook won't stop you a second time.`,
     lintBad: (file, list) => `[maxagent, experience] ${file} does not follow the atom format (experience/_spec.md) — fix it now, or it will be found badly and the commit will fail:\n${list}`,
-    actionAtom: (a) => `[experience before the action — this was done before; check it and do it this way, then repeat the call: this atom won't stop you again]\n(${a.file})\n${a.text}`,
+    actionAtom: (a) => `[experience: this was done here before]\n(${a.file})\n${a.text}`,
     recallHeads: { sure: '[experience — looks like I did this before; check it fits]', maybe: '[experience — maybe similar; check it fits]', also: 'Also similar:', only: '[experience — similar cases]',
       shared: (p, v) => `[someone else's experience — not verified here; pack "${p}"${v ? `, v${v}` : ''}]`, adopt: (id) => `If it helps — keep it as your own: node ~/.maxagent/tools/experience-packs.js adopt "${id}"` },
     answerRule: 'Answer to the owner: what to look at (file, image, page) — a clickable link; what to copy (path, command, ready text) — a separate code block. Not verified — say so.',
@@ -62,7 +62,7 @@ const TXT = {
     adoptAsk: (head, id) => `[experience] A shared (someone else's) atom "${head}" was shown this turn. If it helped and worked — keep it as your own: node ~/.maxagent/tools/experience-packs.js adopt "${id}", fix paths if needed and check lint. If not — do nothing and finish. This hook won't stop you a second time.`,
     did: { research: 'web search/reading', shell: 'commands', edits: 'code fixes after a check' },
     catastrophic: 'The command could destroy the system or all data (drive root, home folder, formatting). Always forbidden — if really needed, the owner runs it.',
-    search: (rows) => `[experience before search] Experience has entries matching this query:\n${rows}\nRead the relevant ones first and follow them. If the answer is not there, repeat the same search (the hook lets it through the second time this turn) and record what you find.`,
+    search: (rows) => `[experience on this query]\n${rows}`,
     ask: (quote, rows) => `[experience before asking] You are asking the owner to do something by hand: "${quote}". Experience has entries about it:\n${rows}\nRead them: if they show a way to do it yourself, do it and don't ask. If it really needs the owner (their sign-in, password, decision, physical action), keep the request and finish. This hook won't stop you a second time.`,
     done: (word, file) => `[maxagent, check] You say "${word}", but after the last edit (${file}) you ran nothing and opened no result. Check it for real (run, open, look) or tell the owner plainly that it is not verified. This hook won't stop you a second time.`,
     browserBuiltIn: (tool) => `[maxagent, browser] The agent's built-in browser (${tool}) is turned off by the owner's settings: the browser is only their own Chrome through maxagent-bridge (tools mcp__maxagent-bridge__*: browser_status, tabs_list, snapshot, click, type…). If they are not in your list, find them with a tool search for maxagent-bridge.`,
@@ -81,7 +81,7 @@ const TXT = {
     projectHead: '[proyecto] Parece trabajo de un proyecto — ficha y tarea activa:',
     stop: (did) => `[maxagent, experiencia] En este turno: ${did}, pero la experiencia (experience/) no cambió. Experiencia es una acción repetible sin búsquedas ni errores. Si en este turno hubo que buscar, algo falló, el dueño dio una regla o salió una forma que se repetirá — escribe un átomo en experience/<tipo>/<cosa>.md según experience/_spec.md (muestra — experience/_template.md; si ese átomo ya existe, corrígelo):\n### <tarea con las palabras de la petición>\n- когда: <petición> · <comando/herramienta> · <texto del error>\n- вещь: <objeto> · <objeto>\n1. <paso, comando>\n- проверка: <qué debe salir>\n- ловушка: no <así> — <por qué>\n- источник: experiencia propia, <fecha>\nComprueba: node ~/.maxagent/tools/experience-engine.js lint <archivo> → sin errores; find "<palabras de la petición>" → el átomo arriba. Luego commit. Si no hay nada que anotar, di por qué en una línea y termina. Este hook no te detendrá una segunda vez.`,
     lintBad: (file, list) => `[maxagent, experiencia] ${file} no sigue el formato de átomo (experience/_spec.md) — corrígelo ahora, o se encontrará mal y el commit no pasará:\n${list}`,
-    actionAtom: (a) => `[experiencia antes de la acción — esto ya se hizo antes; revísalo y hazlo así, luego repite la llamada: este átomo no te volverá a detener]\n(${a.file})\n${a.text}`,
+    actionAtom: (a) => `[experiencia: esto ya se hizo aquí]\n(${a.file})\n${a.text}`,
     recallHeads: { sure: '[experiencia — parece que ya hice esto; comprueba si encaja]', maybe: '[experiencia — quizá algo parecido; comprueba si encaja]', also: 'También parecido:', only: '[experiencia — casos parecidos]',
       shared: (p, v) => `[experiencia ajena — no verificada aquí; paquete «${p}»${v ? `, v${v}` : ''}]`, adopt: (id) => `Si sirve, guárdala como tuya: node ~/.maxagent/tools/experience-packs.js adopt "${id}"` },
     updateAvail: (cur, v) => `[maxagent] Salió la versión ${v} (tienes ${cur || '?'}). Ofrece al dueño actualizar y, tras su «sí», ejecuta: npx --yes maxagent@latest update — el propio comando muestra las novedades.`,
@@ -90,7 +90,7 @@ const TXT = {
     adoptAsk: (head, id) => `[experiencia] En este turno se mostró un átomo ajeno «${head}» (paquete compartido). Si sirvió y funcionó, guárdalo como tuyo: node ~/.maxagent/tools/experience-packs.js adopt "${id}", corrige rutas si hace falta y comprueba lint. Si no sirvió, no hagas nada y termina. Este hook no te detendrá una segunda vez.`,
     did: { research: 'búsqueda/lectura en la web', shell: 'comandos', edits: 'correcciones de código tras una comprobación' },
     catastrophic: 'El comando podría destruir el sistema o todos los datos (raíz del disco, carpeta personal, formateo). Prohibido siempre — si de verdad hace falta, lo ejecuta el dueño.',
-    search: (rows) => `[experiencia antes de buscar] La experiencia tiene entradas que coinciden con esta búsqueda:\n${rows}\nLee primero las que encajen y sigue lo que dicen. Si la respuesta no está, repite la misma búsqueda (el hook la deja pasar la segunda vez en este turno) y anota luego lo que encuentres.`,
+    search: (rows) => `[experiencia sobre esta búsqueda]\n${rows}`,
     ask: (quote, rows) => `[experiencia antes de pedir] Le pides al dueño que haga algo a mano: «${quote}». La experiencia tiene entradas sobre ello:\n${rows}\nLéelas: si muestran una forma de hacerlo tú mismo, hazlo y no pidas. Si de verdad hace falta el dueño (su inicio de sesión, contraseña, decisión, acción física), mantén la petición y termina. Este hook no te detendrá una segunda vez.`,
     done: (word, file) => `[maxagent, comprobación] Escribes «${word}», pero tras la última edición (${file}) no ejecutaste nada ni abriste ningún resultado. Compruébalo de verdad (ejecuta, abre, mira) o dile claramente al dueño que no está verificado. Este hook no te detendrá una segunda vez.`,
     browserBuiltIn: (tool) => `[maxagent, navegador] El navegador integrado del agente (${tool}) está desactivado en los ajustes del dueño: el navegador es solo su propio Chrome a través de maxagent-bridge (herramientas mcp__maxagent-bridge__*: browser_status, tabs_list, snapshot, click, type…). Si no están en tu lista, búscalas con la búsqueda de herramientas por maxagent-bridge.`,
@@ -109,7 +109,7 @@ const TXT = {
     projectHead: '[projeto] Parece trabalho de projeto — cartão e tarefa ativa:',
     stop: (did) => `[maxagent, experiência] Neste turno: ${did}, mas a experiência (experience/) não mudou. Experiência é uma ação repetível sem busca e sem erros. Se neste turno foi preciso buscar, algo falhou, o dono deu uma regra ou saiu um jeito que vai se repetir — escreva um átomo em experience/<tipo>/<coisa>.md conforme experience/_spec.md (modelo — experience/_template.md; se esse átomo já existe, corrija-o):\n### <tarefa nas palavras do pedido>\n- когда: <pedido> · <comando/ferramenta> · <texto do erro>\n- вещь: <objeto> · <objeto>\n1. <passo, comando>\n- проверка: <o que deve sair>\n- ловушка: não <assim> — <por quê>\n- источник: experiência própria, <data>\nConfira: node ~/.maxagent/tools/experience-engine.js lint <arquivo> → sem erros; find "<palavras do pedido>" → o átomo no topo. Depois commit. Nada a registrar — diga por quê numa linha e termine. Este hook não vai te parar uma segunda vez.`,
     lintBad: (file, list) => `[maxagent, experiência] ${file} não segue o formato de átomo (experience/_spec.md) — corrija agora, senão ele será mal encontrado e o commit não vai passar:\n${list}`,
-    actionAtom: (a) => `[experiência antes da ação — isso já foi feito antes; confira e faça assim, depois repita a chamada: este átomo não vai te parar de novo]\n(${a.file})\n${a.text}`,
+    actionAtom: (a) => `[experiência: isso já foi feito aqui]\n(${a.file})\n${a.text}`,
     recallHeads: { sure: '[experiência — parece que já fiz isso; confira se serve]', maybe: '[experiência — talvez algo parecido; confira se serve]', also: 'Também parecido:', only: '[experiência — casos parecidos]',
       shared: (p, v) => `[experiência de outra pessoa — não verificada aqui; pacote «${p}»${v ? `, v${v}` : ''}]`, adopt: (id) => `Se ajudar, guarde como sua: node ~/.maxagent/tools/experience-packs.js adopt "${id}"` },
     updateAvail: (cur, v) => `[maxagent] Saiu a versão ${v} (você tem ${cur || '?'}). Ofereça ao dono atualizar e, depois do «sim» dele, execute: npx --yes maxagent@latest update — o próprio comando mostra as novidades.`,
@@ -118,7 +118,7 @@ const TXT = {
     adoptAsk: (head, id) => `[experiência] Neste turno apareceu um átomo de outra pessoa «${head}» (pacote compartilhado). Se ajudou e funcionou, guarde como seu: node ~/.maxagent/tools/experience-packs.js adopt "${id}", corrija caminhos se preciso e confira o lint. Se não ajudou, não faça nada e termine. Este hook não vai te parar uma segunda vez.`,
     did: { research: 'busca/leitura na web', shell: 'comandos', edits: 'correções de código depois de uma verificação' },
     catastrophic: 'O comando pode destruir o sistema ou todos os dados (raiz do disco, pasta pessoal, formatação). Sempre proibido — se for mesmo necessário, o dono executa.',
-    search: (rows) => `[experiência antes da busca] A experiência tem registros que batem com esta busca:\n${rows}\nLeia primeiro os que servem e siga-os. Se a resposta não estiver lá, repita a mesma busca (o hook a deixa passar na segunda vez neste turno) e depois registre o que encontrar.`,
+    search: (rows) => `[experiência sobre esta busca]\n${rows}`,
     ask: (quote, rows) => `[experiência antes de pedir] Você está pedindo ao dono que faça algo à mão: «${quote}». A experiência tem registros sobre isso:\n${rows}\nLeia: se mostram um jeito de fazer você mesmo, faça e não peça. Se realmente precisa do dono (login dele, senha, decisão, ação física), mantenha o pedido e termine. Este hook não vai te parar uma segunda vez.`,
     done: (word, file) => `[maxagent, verificação] Você escreve «${word}», mas depois da última edição (${file}) não executou nada nem abriu nenhum resultado. Verifique de verdade (execute, abra, olhe) ou diga claramente ao dono que não foi verificado. Este hook não vai te parar uma segunda vez.`,
     browserBuiltIn: (tool) => `[maxagent, navegador] O navegador embutido do agente (${tool}) está desligado nas configurações do dono: o navegador é só o Chrome dele, via maxagent-bridge (ferramentas mcp__maxagent-bridge__*: browser_status, tabs_list, snapshot, click, type…). Se elas não estão na sua lista, encontre-as pela busca de ferramentas com maxagent-bridge.`,
@@ -137,7 +137,7 @@ const TXT = {
     projectHead: '[Projekt] Sieht nach Projektarbeit aus — Karte und aktive Aufgabe:',
     stop: (did) => `[maxagent, Erfahrung] In diesem Zug: ${did}, aber die Erfahrung (experience/) hat sich nicht geändert. Erfahrung ist eine wiederholbare Handlung ohne Suche und ohne Fehler. Wenn in diesem Zug gesucht werden musste, etwas schiefging, der Besitzer eine Regel gab oder ein Weg entstand, der sich wiederholen wird — schreib ein Atom nach experience/<Art>/<Sache>.md gemäß experience/_spec.md (Muster — experience/_template.md; gibt es das Atom schon, korrigiere es):\n### <Aufgabe in den Worten der Bitte>\n- когда: <Bitte> · <Befehl/Werkzeug> · <Fehlertext>\n- вещь: <Gegenstand> · <Gegenstand>\n1. <Schritt, Befehl>\n- проверка: <was herauskommen soll>\n- ловушка: nicht <so> — <warum>\n- источник: eigene Erfahrung, <Datum>\nPrüfe: node ~/.maxagent/tools/experience-engine.js lint <Datei> → keine Fehler; find "<Wörter der Bitte>" → das Atom oben. Dann commit. Nichts festzuhalten — sag in einer Zeile, warum, und hör auf. Ein zweites Mal hält dich dieser Hook nicht an.`,
     lintBad: (file, list) => `[maxagent, Erfahrung] ${file} entspricht nicht dem Atom-Format (experience/_spec.md) — korrigiere es jetzt, sonst wird es schlecht gefunden und der Commit scheitert:\n${list}`,
-    actionAtom: (a) => `[Erfahrung vor der Aktion — das wurde schon einmal gemacht; prüfe es und mach es so, dann wiederhole den Aufruf: dieses Atom hält dich nicht noch einmal an]\n(${a.file})\n${a.text}`,
+    actionAtom: (a) => `[Erfahrung: das wurde hier schon gemacht]\n(${a.file})\n${a.text}`,
     recallHeads: { sure: '[Erfahrung — sieht aus, als hätte ich das schon gemacht; prüfe, ob es passt]', maybe: '[Erfahrung — vielleicht Ähnliches; prüfe, ob es passt]', also: 'Auch ähnlich:', only: '[Erfahrung — ähnliche Fälle]',
       shared: (p, v) => `[fremde Erfahrung — hier nicht geprüft; Paket „${p}“${v ? `, v${v}` : ''}]`, adopt: (id) => `Wenn es hilft — als eigene übernehmen: node ~/.maxagent/tools/experience-packs.js adopt "${id}"` },
     updateAvail: (cur, v) => `[maxagent] Version ${v} ist erschienen (Sie haben ${cur || '?'}). Biete dem Besitzer das Update an und führe nach seinem „ja“ aus: npx --yes maxagent@latest update — was neu ist, zeigt der Befehl selbst.`,
@@ -146,7 +146,7 @@ const TXT = {
     adoptAsk: (head, id) => `[Erfahrung] In diesem Zug wurde ein fremdes Atom „${head}“ (geteiltes Paket) angezeigt. Wenn es geholfen und funktioniert hat — übernimm es als eigenes: node ~/.maxagent/tools/experience-packs.js adopt "${id}", passe bei Bedarf Pfade an und prüfe lint. Wenn nicht — tu nichts und hör auf. Ein zweites Mal hält dich dieser Hook nicht an.`,
     did: { research: 'Websuche/Lesen im Web', shell: 'Befehle', edits: 'Code-Korrekturen nach einer Prüfung' },
     catastrophic: 'Der Befehl könnte das System oder alle Daten zerstören (Laufwerkswurzel, Benutzerordner, Formatieren). Immer verboten — wenn es wirklich nötig ist, führt der Besitzer ihn selbst aus.',
-    search: (rows) => `[Erfahrung vor der Suche] Die Erfahrung hat Einträge passend zu dieser Suche:\n${rows}\nLies zuerst die passenden und folge ihnen. Steht die Antwort nicht darin, wiederhole dieselbe Suche (der Hook lässt sie beim zweiten Mal in diesem Zug durch) und halte danach fest, was du findest.`,
+    search: (rows) => `[Erfahrung zu dieser Suche]\n${rows}`,
     ask: (quote, rows) => `[Erfahrung vor der Bitte] Du bittest den Besitzer, etwas von Hand zu tun: „${quote}“. Die Erfahrung hat Einträge dazu:\n${rows}\nLies sie: zeigen sie einen Weg, es selbst zu tun — tu es und bitte nicht. Braucht es wirklich den Besitzer (seine Anmeldung, sein Passwort, seine Entscheidung, eine körperliche Handlung) — lass die Bitte stehen und hör auf. Ein zweites Mal hält dich dieser Hook nicht an.`,
     done: (word, file) => `[maxagent, Prüfung] Du schreibst „${word}“, aber nach der letzten Änderung (${file}) hast du nichts ausgeführt und kein Ergebnis geöffnet. Prüfe es wirklich (ausführen, öffnen, ansehen) oder sag dem Besitzer klar, dass es nicht geprüft ist. Ein zweites Mal hält dich dieser Hook nicht an.`,
     browserBuiltIn: (tool) => `[maxagent, Browser] Der eingebaute Browser des Agenten (${tool}) ist in den Einstellungen des Besitzers abgeschaltet: Browser ist nur sein eigenes Chrome über maxagent-bridge (Werkzeuge mcp__maxagent-bridge__*: browser_status, tabs_list, snapshot, click, type…). Stehen sie nicht in deiner Liste — finde sie über die Werkzeugsuche nach maxagent-bridge.`,
@@ -165,7 +165,7 @@ const TXT = {
     projectHead: '[projet] Ça ressemble à un travail de projet — fiche et tâche active :',
     stop: (did) => `[maxagent, expérience] Pendant ce tour : ${did}, mais l’expérience (experience/) n’a pas changé. L’expérience, c’est une action répétable sans recherche ni erreurs. Si ce tour a demandé une recherche, si quelque chose a échoué, si le propriétaire a donné une règle ou si une façon de faire va se répéter — écris un atome dans experience/<type>/<chose>.md selon experience/_spec.md (modèle — experience/_template.md ; si cet atome existe déjà, corrige-le) :\n### <tâche avec les mots de la demande>\n- когда: <demande> · <commande/outil> · <texte de l’erreur>\n- вещь: <objet> · <objet>\n1. <étape, commande>\n- проверка: <ce qui doit sortir>\n- ловушка: pas <ainsi> — <pourquoi>\n- источник: expérience propre, <date>\nVérifie : node ~/.maxagent/tools/experience-engine.js lint <fichier> → pas d’erreurs ; find "<mots de la demande>" → l’atome en tête. Puis commit. Rien à noter — dis pourquoi en une ligne et termine. Ce hook ne t’arrêtera pas une seconde fois.`,
     lintBad: (file, list) => `[maxagent, expérience] ${file} ne suit pas le format d’atome (experience/_spec.md) — corrige-le maintenant, sinon il sera mal retrouvé et le commit ne passera pas :\n${list}`,
-    actionAtom: (a) => `[expérience avant l’action — cela a déjà été fait ; vérifie et fais comme ça, puis relance l’appel : cet atome ne t’arrêtera plus]\n(${a.file})\n${a.text}`,
+    actionAtom: (a) => `[expérience : cela a déjà été fait ici]\n(${a.file})\n${a.text}`,
     recallHeads: { sure: '[expérience — on dirait que j’ai déjà fait ça ; vérifie que ça convient]', maybe: '[expérience — peut-être quelque chose de proche ; vérifie que ça convient]', also: 'Aussi proche :', only: '[expérience — cas proches]',
       shared: (p, v) => `[expérience d’autrui — non vérifiée ici ; paquet « ${p} »${v ? `, v${v}` : ''}]`, adopt: (id) => `Si ça aide — garde-la comme la tienne : node ~/.maxagent/tools/experience-packs.js adopt "${id}"` },
     updateAvail: (cur, v) => `[maxagent] La version ${v} est sortie (vous avez ${cur || '?'}). Propose au propriétaire de mettre à jour et, après son « oui », lance : npx --yes maxagent@latest update — la commande affiche elle-même les nouveautés.`,
@@ -174,7 +174,7 @@ const TXT = {
     adoptAsk: (head, id) => `[expérience] Un atome d’autrui « ${head} » (paquet partagé) a été affiché pendant ce tour. S’il a servi et marché — garde-le comme le tien : node ~/.maxagent/tools/experience-packs.js adopt "${id}", corrige les chemins si besoin et vérifie lint. Sinon — ne fais rien et termine. Ce hook ne t’arrêtera pas une seconde fois.`,
     did: { research: 'recherche/lecture sur le web', shell: 'commandes', edits: 'corrections de code après une vérification' },
     catastrophic: 'La commande pourrait détruire le système ou toutes les données (racine du disque, dossier personnel, formatage). Toujours interdit — si c’est vraiment nécessaire, le propriétaire la lance lui-même.',
-    search: (rows) => `[expérience avant la recherche] L’expérience contient des entrées correspondant à cette recherche :\n${rows}\nLis d’abord celles qui conviennent et suis-les. Si la réponse n’y est pas, relance la même recherche (le hook la laisse passer la seconde fois dans ce tour) et note ensuite ce que tu trouves.`,
+    search: (rows) => `[expérience sur cette recherche]\n${rows}`,
     ask: (quote, rows) => `[expérience avant de demander] Tu demandes au propriétaire de faire quelque chose à la main : « ${quote} ». L’expérience contient des entrées à ce sujet :\n${rows}\nLis-les : si elles montrent une façon de le faire toi-même, fais-le et ne demande pas. Si le propriétaire est vraiment indispensable (sa connexion, son mot de passe, sa décision, une action physique), garde la demande et termine. Ce hook ne t’arrêtera pas une seconde fois.`,
     done: (word, file) => `[maxagent, vérification] Tu écris « ${word} », mais après la dernière modification (${file}) tu n’as rien lancé ni ouvert aucun résultat. Vérifie pour de vrai (lance, ouvre, regarde) ou dis clairement au propriétaire que ce n’est pas vérifié. Ce hook ne t’arrêtera pas une seconde fois.`,
     browserBuiltIn: (tool) => `[maxagent, navigateur] Le navigateur intégré de l’agent (${tool}) est désactivé par les réglages du propriétaire : le navigateur, c’est uniquement son propre Chrome via maxagent-bridge (outils mcp__maxagent-bridge__* : browser_status, tabs_list, snapshot, click, type…). S’ils ne sont pas dans ta liste, trouve-les par une recherche d’outils sur maxagent-bridge.`,
@@ -193,7 +193,7 @@ const TXT = {
     projectHead: '[项目] 看起来是项目工作 — 卡片和当前任务：',
     stop: (did) => `[maxagent，经验] 本轮：${did}，但经验（experience/）没有变化。经验是无需搜索、不会出错的可重复操作。如果本轮需要搜索、有东西失败了、主人给了规则，或者得到了一个会重复使用的方法 — 按 experience/_spec.md 在 experience/<类别>/<事物>.md 写一个原子（样例 — experience/_template.md；已有这样的原子就修改它）：\n### <用请求原话描述的任务>\n- когда: <请求> · <命令/工具> · <错误文本>\n- вещь: <对象> · <对象>\n1. <步骤，命令>\n- проверка: <应该得到什么>\n- ловушка: 不要<这样> — <原因>\n- источник: 自己的经验，<日期>\n检查：node ~/.maxagent/tools/experience-engine.js lint <文件> → 没有错误；find "<请求关键词>" → 原子排在最前。然后 commit。没有可记录的 — 用一行说明原因并结束。这个钩子不会第二次拦你。`,
     lintBad: (file, list) => `[maxagent，经验] ${file} 不符合原子格式（experience/_spec.md）— 现在就修正，否则很难被找到，commit 也通不过：\n${list}`,
-    actionAtom: (a) => `[操作前的经验 — 以前做过这件事；核对后照着做，然后重新调用：这个原子不会再拦你]\n(${a.file})\n${a.text}`,
+    actionAtom: (a) => `[经验：这里以前这样做过]\n(${a.file})\n${a.text}`,
     recallHeads: { sure: '[经验 — 好像我做过这个；核对是否适用]', maybe: '[经验 — 可能有类似的；核对是否适用]', also: '其他类似：', only: '[经验 — 类似的情况]',
       shared: (p, v) => `[他人的经验 — 在这里未经验证；经验包「${p}」${v ? `，v${v}` : ''}]`, adopt: (id) => `如果有用 — 存为自己的：node ~/.maxagent/tools/experience-packs.js adopt "${id}"` },
     updateAvail: (cur, v) => `[maxagent] 已发布 ${v} 版（你的是 ${cur || '?'}）。向主人提议更新，在主人说「是」之后运行：npx --yes maxagent@latest update — 更新内容由该命令自己显示。`,
@@ -202,7 +202,7 @@ const TXT = {
     adoptAsk: (head, id) => `[经验] 本轮显示了他人的原子「${head}」（共享经验包）。如果它有用且奏效 — 存为自己的：node ~/.maxagent/tools/experience-packs.js adopt "${id}"，必要时修改路径并检查 lint。没用 — 什么都不做，结束即可。这个钩子不会第二次拦你。`,
     did: { research: '网络搜索/阅读', shell: '命令', edits: '检查后的代码修改' },
     catastrophic: '该命令可能毁掉系统或全部数据（磁盘根目录、主文件夹、格式化）。永远禁止 — 如果确实需要，由主人自己执行。',
-    search: (rows) => `[搜索前的经验] 经验中有与此搜索匹配的条目：\n${rows}\n先读相关的条目并照做。如果里面没有答案 — 重复同样的搜索（本轮第二次钩子会放行），然后把找到的记录到经验里。`,
+    search: (rows) => `[与此搜索相关的经验]\n${rows}`,
     ask: (quote, rows) => `[请求前的经验] 你在请主人手动做事：「${quote}」。经验中有相关条目：\n${rows}\n先读：如果里面有自己完成的方法 — 自己做，不要请求。如果确实离不开主人（他的登录、密码、决定、实际操作）— 保留请求并结束。这个钩子不会第二次拦你。`,
     done: (word, file) => `[maxagent，检查] 你写了「${word}」，但在最后一次修改（${file}）之后什么都没运行，也没打开结果。请实际检查（运行、打开、查看），或者直接告诉主人尚未验证。这个钩子不会第二次拦你。`,
     browserBuiltIn: (tool) => `[maxagent，浏览器] 智能体的内置浏览器（${tool}）已被主人的设置禁用：浏览器只能是主人自己的 Chrome，通过 maxagent-bridge 使用（工具 mcp__maxagent-bridge__*：browser_status、tabs_list、snapshot、click、type…）。如果你的列表里没有这些工具 — 用工具搜索查找 maxagent-bridge。`,
@@ -221,7 +221,7 @@ const TXT = {
     projectHead: '[プロジェクト] プロジェクトの作業のようです — カードと進行中のタスク:',
     stop: (did) => `[maxagent、経験] このターン: ${did}。しかし経験（experience/）は変わっていません。経験とは、検索もミスもなく繰り返せる行動です。このターンで検索が必要だった、何かが失敗した、オーナーがルールを示した、繰り返し使う方法ができた — なら experience/_spec.md に従って experience/<種類>/<対象>.md にアトムを書いてください（見本 — experience/_template.md。同じアトムがあれば直す）:\n### <依頼の言葉で書いたタスク>\n- когда: <依頼> · <コマンド/ツール> · <エラーの文>\n- вещь: <対象> · <対象>\n1. <手順、コマンド>\n- проверка: <得られるべき結果>\n- ловушка: <こう>しない — <理由>\n- источник: 自分の経験、<日付>\n確認: node ~/.maxagent/tools/experience-engine.js lint <ファイル> → エラーなし。find "<依頼の言葉>" → アトムが一番上。その後 commit。記録することがなければ、理由を 1 行で述べて終了。このフックが止めるのは 1 回だけです。`,
     lintBad: (file, list) => `[maxagent、経験] ${file} はアトムの形式（experience/_spec.md）になっていません — 今すぐ直してください。直さないと見つけにくく、commit も通りません:\n${list}`,
-    actionAtom: (a) => `[操作前の経験 — これは以前にやったことがあります。確認してそのとおりに行い、呼び出しをやり直してください: このアトムが止めるのは 1 回だけです]\n(${a.file})\n${a.text}`,
+    actionAtom: (a) => `[経験：以前ここでこうしました]\n(${a.file})\n${a.text}`,
     recallHeads: { sure: '[経験 — 以前やったことがあるようです。合っているか確認]', maybe: '[経験 — 似たものかもしれません。合っているか確認]', also: 'ほかに似たもの:', only: '[経験 — 似たケース]',
       shared: (p, v) => `[他人の経験 — ここでは未確認。パック「${p}」${v ? `、v${v}` : ''}]`, adopt: (id) => `役に立ったら自分のものとして保存: node ~/.maxagent/tools/experience-packs.js adopt "${id}"` },
     updateAvail: (cur, v) => `[maxagent] バージョン ${v} が出ました（現在 ${cur || '?'}）。オーナーに更新を提案し、「はい」の後に実行: npx --yes maxagent@latest update — 新機能はコマンド自体が表示します。`,
@@ -230,7 +230,7 @@ const TXT = {
     adoptAsk: (head, id) => `[経験] このターンで他人のアトム「${head}」（共有パック）が表示されました。役に立って動いたなら自分のものとして保存: node ~/.maxagent/tools/experience-packs.js adopt "${id}"。必要ならパスを直し、lint を確認。役に立たなければ何もせず終了。このフックが止めるのは 1 回だけです。`,
     did: { research: 'ネットでの検索・閲覧', shell: 'コマンド', edits: '確認後のコード修正' },
     catastrophic: 'このコマンドはシステムやすべてのデータを壊すおそれがあります（ドライブのルート、ホームフォルダ、フォーマット）。常に禁止 — 本当に必要ならオーナー自身が実行します。',
-    search: (rows) => `[検索前の経験] この検索に合う経験の記録があります:\n${rows}\nまず合うものを読み、そのとおりに行ってください。答えがなければ同じ検索をもう一度（このターンの 2 回目はフックが通します）。見つけたことは後で経験に記録してください。`,
+    search: (rows) => `[この検索に関する経験]\n${rows}`,
     ask: (quote, rows) => `[依頼前の経験] オーナーに手作業を頼もうとしています:「${quote}」。これについての経験があります:\n${rows}\n読んでください: 自分でやる方法があれば、自分でやって頼まない。どうしてもオーナーが必要なら（本人のログイン、パスワード、判断、物理的な操作）、依頼を残して終了。このフックが止めるのは 1 回だけです。`,
     done: (word, file) => `[maxagent、確認] 「${word}」と書いていますが、最後の編集（${file}）の後に何も実行せず、結果も開いていません。実際に確認する（実行する、開く、見る）か、未確認だとオーナーにはっきり伝えてください。このフックが止めるのは 1 回だけです。`,
     browserBuiltIn: (tool) => `[maxagent、ブラウザ] エージェント内蔵のブラウザ（${tool}）はオーナーの設定で禁止されています: ブラウザはオーナー自身の Chrome のみ、maxagent-bridge 経由で使います（ツール mcp__maxagent-bridge__*: browser_status、tabs_list、snapshot、click、type…）。一覧になければ、ツール検索で maxagent-bridge を探してください。`,
@@ -249,7 +249,7 @@ const TXT = {
     projectHead: '[프로젝트] 프로젝트 작업으로 보입니다 — 카드와 진행 중인 작업:',
     stop: (did) => `[maxagent, 경험] 이번 턴: ${did}, 그런데 경험(experience/)은 바뀌지 않았습니다. 경험이란 검색도 실수도 없이 반복할 수 있는 행동입니다. 이번 턴에 검색이 필요했거나, 뭔가 실패했거나, 주인이 규칙을 줬거나, 반복될 방법이 나왔다면 — experience/_spec.md에 따라 experience/<종류>/<대상>.md에 아톰을 쓰세요 (예시 — experience/_template.md; 같은 아톰이 이미 있으면 고치기):\n### <요청한 말 그대로의 작업>\n- когда: <요청> · <명령/도구> · <오류 문구>\n- вещь: <대상> · <대상>\n1. <단계, 명령>\n- проверка: <나와야 할 결과>\n- ловушка: <이렇게> 하지 말 것 — <이유>\n- источник: 직접 경험, <날짜>\n확인: node ~/.maxagent/tools/experience-engine.js lint <파일> → 오류 없음; find "<요청 단어>" → 아톰이 맨 위. 그다음 commit. 기록할 것이 없으면 이유를 한 줄로 말하고 마치세요. 이 훅은 두 번 막지 않습니다.`,
     lintBad: (file, list) => `[maxagent, 경험] ${file}이(가) 아톰 형식(experience/_spec.md)에 맞지 않습니다 — 지금 고치세요. 아니면 잘 찾아지지 않고 commit도 통과하지 못합니다:\n${list}`,
-    actionAtom: (a) => `[행동 전 경험 — 전에 해 본 일입니다; 확인하고 그대로 한 뒤 호출을 다시 하세요: 이 아톰은 다시 막지 않습니다]\n(${a.file})\n${a.text}`,
+    actionAtom: (a) => `[경험: 전에 여기서 이렇게 했습니다]\n(${a.file})\n${a.text}`,
     recallHeads: { sure: '[경험 — 전에 해 본 것 같습니다; 맞는지 확인]', maybe: '[경험 — 비슷한 것일 수 있습니다; 맞는지 확인]', also: '그 밖에 비슷한 것:', only: '[경험 — 비슷한 사례]',
       shared: (p, v) => `[다른 사람의 경험 — 여기서 확인되지 않음; 팩 "${p}"${v ? `, v${v}` : ''}]`, adopt: (id) => `도움이 되면 내 것으로 저장: node ~/.maxagent/tools/experience-packs.js adopt "${id}"` },
     updateAvail: (cur, v) => `[maxagent] ${v} 버전이 나왔습니다 (현재 ${cur || '?'}). 주인에게 업데이트를 제안하고, "예"라고 하면 실행: npx --yes maxagent@latest update — 새로운 내용은 명령이 직접 보여 줍니다.`,
@@ -258,7 +258,7 @@ const TXT = {
     adoptAsk: (head, id) => `[경험] 이번 턴에 다른 사람의 아톰 "${head}" (공유 팩)이 표시되었습니다. 도움이 되고 작동했다면 내 것으로 저장: node ~/.maxagent/tools/experience-packs.js adopt "${id}", 필요하면 경로를 고치고 lint를 확인하세요. 도움이 안 됐다면 아무것도 하지 말고 마치세요. 이 훅은 두 번 막지 않습니다.`,
     did: { research: '인터넷 검색/읽기', shell: '명령', edits: '확인 후 코드 수정' },
     catastrophic: '이 명령은 시스템이나 모든 데이터를 파괴할 수 있습니다 (드라이브 루트, 홈 폴더, 포맷). 항상 금지 — 정말 필요하면 주인이 직접 실행합니다.',
-    search: (rows) => `[검색 전 경험] 이 검색과 맞는 경험 기록이 있습니다:\n${rows}\n먼저 맞는 것을 읽고 그대로 하세요. 거기에 답이 없으면 같은 검색을 다시 하세요 (이번 턴 두 번째에는 훅이 통과시킵니다). 찾은 것은 나중에 경험에 기록하세요.`,
+    search: (rows) => `[이 검색에 관한 경험]\n${rows}`,
     ask: (quote, rows) => `[요청 전 경험] 주인에게 손으로 해 달라고 요청하고 있습니다: "${quote}". 이에 대한 경험 기록이 있습니다:\n${rows}\n읽어 보세요: 직접 하는 방법이 있으면 직접 하고 요청하지 마세요. 정말 주인이 필요하면 (본인 로그인, 비밀번호, 결정, 물리적 행동) 요청을 남기고 마치세요. 이 훅은 두 번 막지 않습니다.`,
     done: (word, file) => `[maxagent, 확인] "${word}"라고 쓰고 있지만, 마지막 수정(${file}) 뒤로 아무것도 실행하지 않았고 결과도 열지 않았습니다. 실제로 확인하거나 (실행하고, 열고, 보기) 확인하지 않았다고 주인에게 분명히 말하세요. 이 훅은 두 번 막지 않습니다.`,
     browserBuiltIn: (tool) => `[maxagent, 브라우저] 에이전트 내장 브라우저(${tool})는 주인의 설정으로 꺼져 있습니다: 브라우저는 maxagent-bridge를 통한 주인의 Chrome뿐입니다 (도구 mcp__maxagent-bridge__*: browser_status, tabs_list, snapshot, click, type…). 목록에 없으면 도구 검색에서 maxagent-bridge로 찾으세요.`,
@@ -277,7 +277,7 @@ const TXT = {
     projectHead: '[प्रोजेक्ट] लगता है प्रोजेक्ट का काम है — कार्ड और चालू काम:',
     stop: (did) => `[maxagent, अनुभव] इस बारी में: ${did}, लेकिन अनुभव (experience/) नहीं बदला। अनुभव वह दोहराने लायक काम है जिसमें न खोज लगे न गलती हो। अगर इस बारी में खोजना पड़ा, कुछ विफल हुआ, मालिक ने नियम दिया या कोई ऐसा तरीका निकला जो दोहराया जाएगा — experience/_spec.md के अनुसार experience/<प्रकार>/<चीज़>.md में एक एटम लिखो (नमूना — experience/_template.md; ऐसा एटम पहले से हो तो उसे सुधारो):\n### <अनुरोध के शब्दों में काम>\n- когда: <अनुरोध> · <कमांड/टूल> · <त्रुटि का पाठ>\n- вещь: <चीज़> · <चीज़>\n1. <कदम, कमांड>\n- проверка: <क्या मिलना चाहिए>\n- ловушка: <ऐसे> नहीं — <क्यों>\n- источник: अपना अनुभव, <तारीख>\nजाँचो: node ~/.maxagent/tools/experience-engine.js lint <फ़ाइल> → कोई त्रुटि नहीं; find "<अनुरोध के शब्द>" → एटम सबसे ऊपर। फिर commit। दर्ज करने को कुछ नहीं — एक पंक्ति में वजह बताओ और खत्म करो। यह हुक दूसरी बार नहीं रोकेगा।`,
     lintBad: (file, list) => `[maxagent, अनुभव] ${file} एटम के प्रारूप (experience/_spec.md) में नहीं है — अभी ठीक करो, वरना यह ठीक से नहीं मिलेगा और commit पास नहीं होगा:\n${list}`,
-    actionAtom: (a) => `[काम से पहले अनुभव — यह पहले किया जा चुका है; जाँचो और उसी तरह करो, फिर कॉल दोहराओ: यह एटम दोबारा नहीं रोकेगा]\n(${a.file})\n${a.text}`,
+    actionAtom: (a) => `[अनुभव: यहाँ पहले ऐसा किया गया था]\n(${a.file})\n${a.text}`,
     recallHeads: { sure: '[अनुभव — लगता है मैं यह पहले कर चुका हूँ; जाँचो कि फ़िट बैठता है]', maybe: '[अनुभव — शायद कुछ मिलता-जुलता; जाँचो कि फ़िट बैठता है]', also: 'और मिलते-जुलते:', only: '[अनुभव — मिलते-जुलते मामले]',
       shared: (p, v) => `[किसी और का अनुभव — यहाँ जाँचा नहीं गया; पैक "${p}"${v ? `, v${v}` : ''}]`, adopt: (id) => `काम आए तो अपना बना लो: node ~/.maxagent/tools/experience-packs.js adopt "${id}"` },
     updateAvail: (cur, v) => `[maxagent] संस्करण ${v} आ गया है (आपके पास ${cur || '?'})। मालिक को अपडेट का सुझाव दो और उनके "हाँ" के बाद चलाओ: npx --yes maxagent@latest update — नया क्या है, कमांड खुद दिखाएगी।`,
@@ -286,7 +286,7 @@ const TXT = {
     adoptAsk: (head, id) => `[अनुभव] इस बारी में किसी और का एटम "${head}" (साझा पैक) दिखाया गया। अगर काम आया और चला — अपना बना लो: node ~/.maxagent/tools/experience-packs.js adopt "${id}", ज़रूरत हो तो पाथ ठीक करो और lint जाँचो। काम नहीं आया — कुछ मत करो और खत्म करो। यह हुक दूसरी बार नहीं रोकेगा।`,
     did: { research: 'इंटरनेट पर खोज/पढ़ना', shell: 'कमांड', edits: 'जाँच के बाद कोड में सुधार' },
     catastrophic: 'यह कमांड सिस्टम या सारा डेटा नष्ट कर सकती है (डिस्क का रूट, होम फ़ोल्डर, फ़ॉर्मैट)। हमेशा मना है — सच में ज़रूरत हो तो मालिक खुद चलाएँगे।',
-    search: (rows) => `[खोज से पहले अनुभव] इस खोज से मेल खाती अनुभव की प्रविष्टियाँ हैं:\n${rows}\nपहले जो फ़िट बैठें उन्हें पढ़ो और उनके अनुसार करो। जवाब उनमें न हो तो वही खोज दोहराओ (इस बारी में दूसरी बार हुक जाने देगा), और जो मिले उसे बाद में अनुभव में दर्ज करो।`,
+    search: (rows) => `[इस खोज से जुड़ा अनुभव]\n${rows}`,
     ask: (quote, rows) => `[अनुरोध से पहले अनुभव] तुम मालिक से हाथ से कुछ करने को कह रहे हो: "${quote}"। इस बारे में अनुभव की प्रविष्टियाँ हैं:\n${rows}\nउन्हें पढ़ो: अगर खुद करने का तरीका है — खुद करो और मत कहो। अगर मालिक के बिना सच में नहीं होगा (उनका लॉगिन, पासवर्ड, फ़ैसला, शारीरिक काम) — अनुरोध रहने दो और खत्म करो। यह हुक दूसरी बार नहीं रोकेगा।`,
     done: (word, file) => `[maxagent, जाँच] तुम "${word}" लिख रहे हो, पर आखिरी बदलाव (${file}) के बाद तुमने कुछ नहीं चलाया और कोई नतीजा नहीं खोला। सच में जाँचो (चलाओ, खोलो, देखो) या मालिक को साफ़ बताओ कि जाँचा नहीं गया। यह हुक दूसरी बार नहीं रोकेगा।`,
     browserBuiltIn: (tool) => `[maxagent, ब्राउज़र] एजेंट का बिल्ट-इन ब्राउज़र (${tool}) मालिक की सेटिंग से बंद है: ब्राउज़र सिर्फ़ उनका अपना Chrome है, maxagent-bridge के ज़रिए (टूल mcp__maxagent-bridge__*: browser_status, tabs_list, snapshot, click, type…)। अगर ये तुम्हारी सूची में नहीं हैं — टूल खोज में maxagent-bridge से ढूँढो।`,
@@ -393,6 +393,24 @@ function deny(reason) {
   return { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: reason } };
 }
 const allow = () => (AGENT === 'antigravity' ? { decision: 'allow' } : null);
+const memoryFile = (id) => path.join(ROOT, 'state', `ag-memory-${String(id || 'x').replace(/[^\w.-]/g, '_')}.json`);
+/** A memory, not a gate: the call goes on and the text reaches the model. Claude Code, Codex and OpenClaw's plugin read
+ *  additionalContext; Antigravity has no such field before a tool — it gets the text with its next model call. */
+function remember(input, text) {
+  if (AGENT !== 'antigravity') return { hookSpecificOutput: { hookEventName: 'PreToolUse', additionalContext: text } };
+  try {
+    const file = memoryFile(input.conversationId);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify([...readJson(file, []), text].slice(-5)));
+  } catch { /* a memory is a convenience */ }
+  return allow();
+}
+function takeMemories(id) {
+  const file = memoryFile(id);
+  const list = readJson(file, []);
+  if (list.length) { try { fs.unlinkSync(file); } catch { /* gone */ } }
+  return list;
+}
 
 /* ---------- experience before a web search / before asking the owner ---------- */
 
@@ -432,7 +450,7 @@ function searchCheck(input, tool) {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, JSON.stringify({ turn, tool, at: new Date().toISOString() }));
   } catch { /* state is a convenience */ }
-  return deny(L.search(found));
+  return remember(input, L.search(found));
 }
 
 // Requests to the owner ("please open…", "press…") in Russian and English.
@@ -569,6 +587,16 @@ function formatCheck(input) {
 }
 
 /** The answer shelf: atoms found by the text of the finished answer (not the request). */
+/** What of an atom the answer does not carry yet: the heading and only the absent steps and traps; '' — nothing to add.
+ *  "when"/"thing" are for search, "source" is for people — noise for the model. */
+function notInAnswer(atomText, answer) {
+  const words = (t) => (String(t).toLowerCase().match(/[\p{L}\p{N}_-]{4,}/gu) || []).map((w) => w.slice(0, 6));
+  const have = new Set(words(answer));
+  const [head, ...rest] = String(atomText).split(/\r?\n/).filter((l) => !/^- (когда|вещь|источник|проверка|when|thing|source|check):/i.test(l));
+  const absent = rest.filter((l) => { const w = words(l); return w.length && w.filter((x) => have.has(x)).length / w.length < 0.5; });
+  return absent.length ? [head, ...absent].join('\n') : '';
+}
+
 function answerCheck(input) {
   if (input.stop_hook_active || !ENG || !ENG.answerRecall) return Promise.resolve(null);
   const text = lastAssistantText(input);
@@ -576,9 +604,8 @@ function answerCheck(input) {
   const session = input.session_id || input.conversationId || 'default';
   return (ENG.queryVector ? ENG.queryVector(text.slice(0, 2000)) : Promise.resolve(null)).then((qvec) => {
     const atoms = ENG.answerRecall(text, session, { qvec });
-    // Only what to do: the heading, steps and traps. "when"/"thing" are for search, "source" is for people — noise for the model.
-    const brief = (t) => String(t).split(/\r?\n/).filter((l) => !/^- (когда|вещь|источник|проверка|when|thing|source|check):/i.test(l)).join('\n');
-    return atoms.length ? tx('answerAtoms')(atoms.map((a) => brief(a.text)).join('\n\n')) : null;
+    const left = atoms.map((a) => notInAnswer(a.text, text)).filter(Boolean);
+    return left.length ? tx('answerAtoms')(left.join('\n\n')) : null;
   });
 }
 
@@ -670,7 +697,7 @@ function actionCheck(input, tool, command) {
     .replace(/"(?:\\.|[^"\\])*"|'[^']*'/g, ' ')
     .replace(/\S*[\\/]\S*/g, ' ');
   const atom = ENG.actionRecall(`${tool.replace(/^mcp__/, '').replace(/__/g, ' ')} ${doing}`, input.session_id || input.conversationId || 'default');
-  return atom ? deny(L.actionAtom(atom)) : null;
+  return atom ? remember(input, L.actionAtom(atom)) : null;
 }
 
 /* ---------- inbox: "save this for later" ---------- */
@@ -895,12 +922,13 @@ function run(raw) {
     // experience for it, like UserPromptSubmit elsewhere; core rules on the first call. The injected step is ephemeral:
     // the model sees it while planning this turn — that is where it matters (live check 08.11.2026).
     const user = agUserTurn(input);
-    if (input.invocationNum !== 0 && !user) return '{}';
-    const rules = input.invocationNum === 0 ? sessionStart({}) : '';
     const session = input.conversationId || 'antigravity';
+    const memories = takeMemories(session);
+    if (input.invocationNum !== 0 && !user) return memories.length ? JSON.stringify({ injectSteps: [{ ephemeralMessage: memories.join('\n\n') }] }) : '{}';
+    const rules = input.invocationNum === 0 ? sessionStart({}) : '';
     const vec = user && ENG && ENG.queryVector ? ENG.queryVector(user) : Promise.resolve(null);
     return vec.then((qvec) => {
-      const lines = user ? hint(user, session, qvec) : [L.reminder];
+      const lines = [...(user ? hint(user, session, qvec) : [L.reminder]), ...memories];
       return JSON.stringify({ injectSteps: [{ ephemeralMessage: (rules ? rules + '\n' : '') + lines.join('\n') }] });
     });
   }

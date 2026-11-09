@@ -2,6 +2,13 @@
 
 maxagent and maxagent-bridge always share one version number and are released together.
 
+## 0.5.2
+
+- Experience hints no longer stop commands or searches — they arrive as a memory.
+- At the end of an answer the agent adds only what is really missing.
+- Every agent's installed skills are found on request: a personal shelf, refreshed once a day.
+- OpenClaw: a memory comes with the tool result; one more pass at the end of a turn only if something is missing.
+
 ## 0.5.1
 
 - `npx maxagent experience share`: check and prepare a pack for the shared library (format, secrets, planted commands, personal data); sends nothing.

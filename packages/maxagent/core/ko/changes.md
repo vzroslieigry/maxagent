@@ -2,6 +2,11 @@
 
 에이전트는 업데이트 뒤 한 번 주인에게 새 기능을 보여 주고 (규칙, 8절) `experience/maxagent.md`에 기록을 남깁니다.
 
+## 0.5.2
+- 경험 힌트가 더 이상 명령과 검색을 멈추지 않고 기억처럼 전달됩니다.
+- 답변 끝에서 에이전트는 정말 빠진 내용만 덧붙입니다.
+- 모든 에이전트에 설치된 스킬을 요청에 따라 찾습니다: 개인 선반, 하루 한 번 갱신.
+
 ## 0.5.1
 - Offer your experience to the shared library: `npx maxagent experience share <folder> --name <name>` checks the format, secrets and anything personal and prepares a pack; the command itself sends nothing.
 - Self-update sees a fresh release at once.

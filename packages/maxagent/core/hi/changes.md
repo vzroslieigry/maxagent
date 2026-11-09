@@ -2,6 +2,11 @@
 
 अपडेट के बाद एजेंट मालिक को एक बार दिखाता है कि नया क्या है (नियम, खंड 8) और `experience/maxagent.md` में एक नोट छोड़ता है।
 
+## 0.5.2
+- अनुभव के संकेत अब कमांड और खोज को नहीं रोकते — वे याद की तरह आते हैं।
+- उत्तर के अंत में एजेंट केवल वही जोड़ता है जो सच में छूटा हो।
+- सभी एजेंटों के इंस्टॉल किए गए स्किल अनुरोध पर मिलते हैं: निजी शेल्फ़, दिन में एक बार अपडेट।
+
 ## 0.5.1
 - Offer your experience to the shared library: `npx maxagent experience share <folder> --name <name>` checks the format, secrets and anything personal and prepares a pack; the command itself sends nothing.
 - Self-update sees a fresh release at once.

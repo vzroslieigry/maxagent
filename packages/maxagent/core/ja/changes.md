@@ -2,6 +2,11 @@
 
 エージェントは更新後に一度だけ新機能をオーナーに見せ（ルール、第 8 節）、`experience/maxagent.md` に記録を残します。
 
+## 0.5.2
+- 経験のヒントはコマンドや検索を止めなくなり、記憶として届きます。
+- 回答の最後に、エージェントは本当に足りない点だけを補います。
+- すべてのエージェントのインストール済みスキルを依頼に応じて見つけます（個人用の棚、1日1回更新）。
+
 ## 0.5.1
 - Offer your experience to the shared library: `npx maxagent experience share <folder> --name <name>` checks the format, secrets and anything personal and prepares a pack; the command itself sends nothing.
 - Self-update sees a fresh release at once.

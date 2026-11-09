@@ -119,7 +119,8 @@ check(!hook('claude-code', 'prompt', { session_id: 's1', prompt: 'привет' 
 
 // PreToolUse.
 const bash = (cmd, session) => ({ session_id: session, tool_name: 'Bash', tool_input: { command: cmd } });
-const decision = (s) => { const o = parsed(s); return o && o.hookSpecificOutput ? o.hookSpecificOutput.permissionDecision : (o && o.decision) || 'allow'; };
+const decision = (s) => { const o = parsed(s); return (o && o.hookSpecificOutput ? o.hookSpecificOutput.permissionDecision : o && o.decision) || 'allow'; };
+const memory = (s) => { const o = parsed(s); return (o && o.hookSpecificOutput && o.hookSpecificOutput.additionalContext) || ''; };
 check(decision(hook('claude-code', 'pretool', bash('ls -la', 's1'))) === 'allow', 'pretool: harmless command allowed');
 check(decision(hook('claude-code', 'pretool', bash('rm -rf ./build', 's1'))) === 'allow', 'pretool: dangerous but legit (rm -rf ./build) → left to the agent\x27s own permission prompts');
 check(decision(hook('codex', 'pretool', bash('pip install requests', 's9'))) === 'allow', 'Codex pretool: install → left to the agent');
@@ -167,10 +168,12 @@ atomFile('chrome.md', 'Chrome', 'Chrome, расширение', '### Перез�
 const trS = path.join(home, 'tr-search.jsonl');
 fs.writeFileSync(trS, JSON.stringify({ type: 'user', timestamp: '2026-11-05T10:00:00Z', message: { content: 'обнови' } }) + '\n');
 const web = (q, extra = {}) => decision(hook('claude-code', 'pretool', { session_id: 'w1', transcript_path: trS, tool_name: 'WebSearch', tool_input: { query: q }, ...extra }));
-check(web('chrome reload extension after update') === 'deny', 'web search matching experience → experience first');
+const firstSearch = hook('claude-code', 'pretool', { session_id: 'w1', transcript_path: trS, tool_name: 'WebSearch', tool_input: { query: 'chrome reload extension after update' } });
+check(decision(firstSearch) === 'allow' && /chrome/i.test(memory(firstSearch)), 'web search matching experience → a memory, the search goes on', firstSearch);
 check(web('chrome reload extension after update') === 'allow', 'same turn, repeated search → allowed');
 check(web('weather tomorrow') === 'allow', 'search with no experience match → allowed at once');
-check(decision(hook('codex', 'pretool', { session_id: 'cx', turn_id: 't1', tool_name: 'web_search', tool_input: { query: 'перезагрузить расширение chrome' } })) === 'deny', 'Codex web search (turn_id) → experience first');
+const cxSearch = hook('codex', 'pretool', { session_id: 'cx', turn_id: 't1', tool_name: 'web_search', tool_input: { query: 'перезагрузить расширение chrome' } });
+check(decision(cxSearch) === 'allow' && /chrome/i.test(memory(cxSearch)), 'Codex web search (turn_id) → a memory, the search goes on', cxSearch);
 const askMsg = 'Ваш шаг: откройте\n```\nchrome://extensions\n```\nи нажмите «Обновить» у расширения.';
 out = parsed(hook('claude-code', 'stop', { last_assistant_message: askMsg }));
 check(out && out.decision === 'block' && /experience\/chrome\.md/.test(out.reason), 'stop: asking the owner for something experience covers → stop once', out && out.reason);
@@ -203,11 +206,17 @@ check(decision(hook('claude-code', 'pretool', bash('git commit -m "chrome extens
 // Experience before an action: the agent's intent shows in the tool call; `когда` of the atom names it. Once per session.
 atomFile('shell.md', 'Командная строка', 'терминал, bash', '### Выполнить команду на этом ПК\n- когда: Bash · ls · grep\n- когда: The token && is not a valid statement separator\n- вещь: Windows · PowerShell 5.1\n1. Инструмент PowerShell — 5.1: `A; if ($?) { B }`.\n- источник: свой опыт, 05.11.2026');
 out = parsed(hook('claude-code', 'pretool', bash('ls -la', 'act')));
-check(decision(JSON.stringify(out)) === 'deny' && /Выполнить команду на этом ПК/.test(JSON.stringify(out)), 'action: first Bash call of a session → the atom about this PC', JSON.stringify(out));
+check(decision(JSON.stringify(out)) === 'allow' && /Выполнить команду на этом ПК/.test(JSON.stringify(out)) && !/повтори|repeat/i.test(JSON.stringify(out)), 'action: first Bash call of a session → a memory about this PC, the call goes on', JSON.stringify(out));
 check(decision(hook('claude-code', 'pretool', bash('ls -la', 'act'))) === 'allow', 'action: same atom a second time → allowed');
 check(decision(hook('claude-code', 'pretool', { session_id: 'act2', tool_name: 'Read', tool_input: { file_path: 'x.md' } })) === 'allow', 'action: quiet tools (Read) never stop');
 out = parsed(hook('claude-code', 'posttool', { session_id: 'act3', tool_name: 'PowerShell', tool_input: { command: 'a && b' }, tool_response: "ParserError: The token '&&' is not a valid statement separator in this version." }));
 check(out && /Выполнить команду/.test(out.hookSpecificOutput.additionalContext), 'action: a failed command → the atom whose trigger is that error', JSON.stringify(out));
+// Antigravity has no field for text before a tool: the memory comes with its next model call, once.
+const agMem = parsed(hook('antigravity', 'pretool', { conversationId: 'agm', toolCall: { name: 'run_command', args: { CommandLine: 'ls -la', Cwd: ws } } }));
+check(agMem && agMem.decision === 'allow', 'Antigravity: experience before an action never stops it', JSON.stringify(agMem));
+out = parsed(hook('antigravity', 'invocation', { invocationNum: 3, conversationId: 'agm' }));
+check(out && out.injectSteps && /Выполнить команду на этом ПК/.test(out.injectSteps[0].ephemeralMessage), 'Antigravity: the memory arrives with the next model call', JSON.stringify(out));
+check(hook('antigravity', 'invocation', { invocationNum: 4, conversationId: 'agm' }) === '{}', 'Antigravity: the memory is not repeated');
 // An experience file written in the wrong format → lint errors go back to the agent at once.
 fs.writeFileSync(path.join(ws, 'experience', 'bad.md'), '---\ntitle: x\naliases: y\n---\n\n### Плохой атом\n- просят: не подтверждено\n- источник: разметка07.11\n');
 out = parsed(hook('claude-code', 'posttool', { session_id: 'act4', tool_name: 'Write', tool_input: { file_path: path.join(ws, 'experience', 'bad.md') }, tool_response: 'ok' }));
