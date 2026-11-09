@@ -1,6 +1,6 @@
 {
   "name": "maxagent",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "Experience-first operating rules for any AI agent (Claude Code, Codex, Antigravity, OpenClaw): one workspace with experience, projects and sync, wired into every agent on the machine.",
   "license": "MIT",
   "homepage": "https://github.com/vzroslieigry/maxagent/tree/main/packages/maxagent#readme",

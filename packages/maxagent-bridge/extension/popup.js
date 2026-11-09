@@ -1,13 +1,13 @@
 const RU = navigator.language.toLowerCase().startsWith("ru");
 const T = RU ? {
   on: "Агенты могут подключаться", off: "Нет связи с maxagent-bridge", stop: "Стоп", resume: "Возобновить",
-  agents: "Агенты", noAgents: "Пока никто не подключался.", remove: "Убрать",
+  agents: "Агенты", noAgents: "Пока никто не подключался.", remove: "Убрать", grants: "Загрузка файлов разрешена",
   rights: { read: "чтение", act: "действия", confirm: "действия с подтверждением" },
   block: "Запретные сайты (по одному на строку, * — любые символы)", save: "Сохранить", log: "Журнал действий",
   install: "Выполните: npx maxagent-bridge install",
 } : {
   on: "Agents can connect", off: "No connection to maxagent-bridge", stop: "Stop", resume: "Resume",
-  agents: "Agents", noAgents: "No agent has connected yet.", remove: "Remove",
+  agents: "Agents", noAgents: "No agent has connected yet.", remove: "Remove", grants: "File upload allowed",
   rights: { read: "read", act: "act", confirm: "act with confirmation" },
   block: "Blocked sites (one per line, * matches anything)", save: "Save", log: "Action log",
   install: "Run: npx maxagent-bridge install",
@@ -17,7 +17,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 
 async function render() {
   const st = await chrome.runtime.sendMessage({ type: "status" });
-  const data = await chrome.storage.local.get(["stopped", "agents", "blocklist", "log"]);
+  const data = await chrome.storage.local.get(["stopped", "agents", "blocklist", "log", "uploadGrants"]);
   $("dot").className = "dot" + (st.host.connected ? " on" : "");
   $("host").textContent = st.host.connected ? T.on : `${T.off}${st.host.error ? ` (${st.host.error})` : ""}. ${T.install}`;
   $("stop").textContent = data.stopped ? T.resume : T.stop;
@@ -31,11 +31,28 @@ async function render() {
     row.innerHTML = `<span><b>${esc(name)}</b> — ${esc(T.rights[a.rights] || a.rights)}${st.agents.includes(name) ? " ●" : ""}</span><button>${T.remove}</button>`;
     row.querySelector("button").onclick = async () => {
       delete agents[name];
-      await chrome.storage.local.set({ agents });
+      const left = Object.fromEntries(Object.entries(data.uploadGrants || {}).filter(([k]) => k.split("\n")[0] !== name));
+      await chrome.storage.local.set({ agents, uploadGrants: left });
       chrome.runtime.sendMessage({ type: "revoke", agent: name });
       render();
     };
     $("agents").appendChild(row);
+  }
+  const grants = data.uploadGrants || {};
+  $("hGrants").textContent = T.grants;
+  $("hGrants").hidden = !Object.keys(grants).length;
+  $("grants").innerHTML = "";
+  for (const key of Object.keys(grants)) {
+    const [agent, site] = key.split("\n");
+    const row = document.createElement("div");
+    row.className = "agent";
+    row.innerHTML = `<span><b>${esc(agent)}</b> — ${esc(site)}</span><button>${T.remove}</button>`;
+    row.querySelector("button").onclick = async () => {
+      delete grants[key];
+      await chrome.storage.local.set({ uploadGrants: grants });
+      render();
+    };
+    $("grants").appendChild(row);
   }
   $("hBlock").textContent = T.block;
   $("block").value = (data.blocklist || maxagentDefaultBlocklist).join("\n");

@@ -2,6 +2,12 @@
 
 maxagent and maxagent-bridge always share one version number and are released together.
 
+## 0.5.3
+
+- Bridge: `snapshot` can read only what is on the screen and search elements by words — many times smaller answers on big pages.
+- Bridge: `click_at` clicks by pixels of a screenshot — for players and canvas.
+- Bridge: a file upload can be allowed once or always for this agent on this site; revoke it in the extension popup.
+
 ## 0.5.2
 
 - Experience hints no longer stop commands or searches — they arrive as a memory.

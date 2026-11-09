@@ -7,7 +7,7 @@ const HOST = "com.maxagent.bridge";
 // Версия КОДА (не манифеста): по ней установщик видит, что Chrome действительно загрузил новый скрипт.
 // Chrome после перезапуска перечитывает манифест, но может держать старый код фонового скрипта из кэша (05.11.2026).
 // Поднимать вместе с "version" в manifest.json.
-const CODE_VERSION = "0.5.2";
+const CODE_VERSION = "0.5.3";
 const P = globalThis.maxagentPolicy;
 const D = globalThis.maxagentDriver;
 const LOG_MAX = 300;
@@ -162,8 +162,14 @@ async function onCall({ conn, id, tool, args }) {
       entry.to = P.hostOf(args.url);
     }
     if (d.confirm) {
-      const answer = await askOwner({ kind: "action", agent: s.agent, tool, site: entry.site || entry.to || "", detail: describeAction(tool, args) });
-      if (!answer.allow) throw new Error("owner_denied_this_action");
+      const site = entry.site || entry.to || "";
+      // Upload: the owner may allow it once or for this agent on this site. A "confirm every action" agent is always asked.
+      const canRemember = tool === "upload" && s.rights === "act" && Boolean(site);
+      if (!(canRemember && await uploadGranted(s.agent, site))) {
+        const answer = await askOwner({ kind: "action", agent: s.agent, tool, site, detail: describeAction(tool, args), canRemember });
+        if (!answer.allow) throw new Error("owner_denied_this_action");
+        if (canRemember && answer.remember) await grantUpload(s.agent, site);
+      }
     }
     const result = await run(tool, args, tab, bl);
     await log({ ...entry, ok: true });
@@ -174,7 +180,18 @@ async function onCall({ conn, id, tool, args }) {
   }
 }
 
+async function uploadGranted(agent, site) {
+  const { uploadGrants = {} } = await chrome.storage.local.get("uploadGrants");
+  return Boolean(uploadGrants[P.uploadGrantKey(agent, site)]);
+}
+async function grantUpload(agent, site) {
+  const { uploadGrants = {} } = await chrome.storage.local.get("uploadGrants");
+  uploadGrants[P.uploadGrantKey(agent, site)] = new Date().toISOString();
+  await chrome.storage.local.set({ uploadGrants });
+}
+
 function describeAction(tool, args) {
+  if (tool === "click_at") return `x ${args.x}, y ${args.y}`;
   if (tool === "type") return `text, ${String(args.text || "").length} characters`;
   if (tool === "upload") return `files: ${(args.files || []).map((f) => String(f).split(/[\\/]/).pop()).join(", ")}`;
   if (tool === "navigate" || tool === "tab_open") return String(args.url || "");
@@ -200,7 +217,7 @@ async function elementRef(tabId, args) {
 
 async function snapshot(tab, args) {
   return D.withDebugger(tab.id, async (target) => {
-    const { documentId, signatures, ...page } = await D.evaluate(target, { action: "inspect", maxElements: args.maxElements, maxText: args.maxText });
+    const { documentId, signatures, ...page } = await D.evaluate(target, { action: "inspect", maxElements: args.maxElements, maxText: args.maxText, viewport: args.viewport, query: args.query });
     const snapshotId = crypto.randomUUID();
     const at = Date.now();
     const all = await chrome.storage.session.get(null);
@@ -286,7 +303,14 @@ async function run(tool, args, tab, bl) {
     case "snapshot":
       return snapshot(tab, args);
     case "screenshot":
-      return D.withDebugger(tab.id, async (target) => ({ tabId: tab.id, url: tab.url, mimeType: "image/jpeg", data: await D.screenshot(target) }));
+      return D.withDebugger(tab.id, async (target) => {
+        const view = await D.evaluate(target, { action: "viewport" });
+        const image = await D.fitImage(await D.screenshot(target));
+        await chrome.storage.session.set({ [`shot:${tab.id}`]: { at: Date.now(), url: tab.url, view, width: image.width, height: image.height } });
+        return { tabId: tab.id, url: tab.url, mimeType: "image/jpeg", data: image.data, width: image.width, height: image.height, cssWidth: view.width, cssHeight: view.height };
+      });
+    case "click_at":
+      return clickAt(tab, args);
     case "read":
     case "scroll":
     case "click":
@@ -297,6 +321,26 @@ async function run(tool, args, tab, bl) {
     default:
       throw new Error(`unknown_tool: ${tool}`);
   }
+}
+
+/** Click by pixels of the latest screenshot of this tab: for what is not in the snapshot (players, canvas). */
+async function clickAt(tab, args) {
+  const win = await chrome.windows.get(tab.windowId);
+  if (!tab.active || win.state === "minimized") throw new Error("click_at_needs_a_visible_tab: call tab_activate first (this brings the tab to the owner's screen)");
+  const key = `shot:${tab.id}`;
+  const shot = (await chrome.storage.session.get(key))[key];
+  if (!shot || Date.now() - shot.at > SNAP_TTL || shot.url !== tab.url) throw new Error("take_a_new_screenshot_first");
+  const x = typeof args.x === "number" ? args.x : NaN, y = typeof args.y === "number" ? args.y : NaN;
+  if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || y < 0 || x >= shot.width || y >= shot.height) throw new Error(`click_at_outside_the_screenshot: it is ${shot.width}x${shot.height}`);
+  await D.withDebugger(tab.id, async (target) => {
+    const view = await D.evaluate(target, { action: "viewport" });
+    if (view.width !== shot.view.width || view.height !== shot.view.height) throw new Error("take_a_new_screenshot_first");
+    await D.click(target, (x + 0.5) * view.width / shot.width, (y + 0.5) * view.height / shot.height);
+  });
+  await chrome.storage.session.remove(key);
+  await new Promise((r) => setTimeout(r, 300));
+  const after = await chrome.tabs.get(tab.id);
+  return { done: true, navigated: after.url !== tab.url || after.status === "loading", url: after.url };
 }
 
 async function pageAction(tool, args, tab) {

@@ -2,6 +2,11 @@
 
 El agente muestra al dueño las novedades una vez tras una actualización (reglas, sección 8) y deja una nota en `experience/maxagent.md`.
 
+## 0.5.3
+- Puente: `snapshot` puede leer solo lo visible en pantalla y buscar elementos por palabras: respuestas mucho menores en páginas grandes.
+- Puente: `click_at` hace clic por píxeles de una captura, para reproductores y canvas.
+- Puente: la subida de archivos se puede permitir una vez o siempre para este agente en este sitio; se revoca en la ventana de la extensión.
+
 ## 0.5.2
 - Las pistas de la experiencia ya no detienen comandos ni búsquedas: llegan como un recuerdo.
 - Al final de la respuesta el agente añade solo lo que realmente falta.

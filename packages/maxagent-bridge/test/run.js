@@ -24,7 +24,10 @@ check(P.decide('snapshot', 'read').allow, 'policy: read agent may snapshot');
 check(!P.decide('click', 'read').allow, 'policy: read agent may not click');
 check(P.decide('click', 'act').allow && !P.decide('click', 'act').confirm, 'policy: act agent clicks without confirmation');
 check(P.decide('click', 'confirm').confirm, 'policy: confirm agent → confirmation');
-check(P.decide('upload', 'act').confirm, 'policy: upload always confirmed');
+check(P.decide('upload', 'act').confirm, 'policy: upload asks unless the owner remembered it for this agent and site');
+check(P.uploadGrantKey('a', 'x.com') !== P.uploadGrantKey('b', 'x.com') && P.uploadGrantKey('a', 'x.com') !== P.uploadGrantKey('a', 'y.com'), 'policy: an upload permission is per agent and per site');
+check(P.decide('click_at', 'act').allow && !P.decide('click_at', 'act').confirm && !P.decide('click_at', 'read').allow && P.decide('click_at', 'confirm').confirm, 'policy: click_at is an action like click');
+check(P.TAB_CONTENT_TOOLS.has('click_at'), 'policy: click_at respects blocked sites');
 check(!P.decide('evaluate_js', 'act').allow, 'policy: unknown tool refused');
 check(!P.decide('evaluate', 'act').allow && !require('../lib/tools').TOOLS.some((t) => t.name === 'evaluate'), "no tool runs the agent's own code in a page (owner's rule 08.11.2026)");
 {

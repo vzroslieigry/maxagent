@@ -10,10 +10,10 @@
   ];
 
   const READ_TOOLS = new Set(["browser_status", "tabs_list", "snapshot", "screenshot", "read", "scroll"]);
-  const ACT_TOOLS = new Set(["tab_open", "tab_close", "tab_activate", "navigate", "click", "type", "press_key", "upload", "record_tab_start", "record_tab_stop"]);
+  const ACT_TOOLS = new Set(["tab_open", "tab_close", "tab_activate", "navigate", "click", "type", "press_key", "upload", "click_at", "record_tab_start", "record_tab_stop"]);
   const ALWAYS_CONFIRM = new Set(["upload"]);
   // Tools that touch the page content of a given tab (blocklist is checked against the tab URL).
-  const TAB_CONTENT_TOOLS = new Set(["snapshot", "screenshot", "read", "click", "type", "press_key", "scroll", "upload", "navigate", "record_tab_start", "record_tab_stop"]);
+  const TAB_CONTENT_TOOLS = new Set(["snapshot", "screenshot", "read", "click", "type", "press_key", "scroll", "upload", "click_at", "navigate", "record_tab_start", "record_tab_stop"]);
 
   const globToRe = (glob) => new RegExp("^" + String(glob).trim().toLowerCase().replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*") + "$");
 
@@ -49,6 +49,9 @@
     return { allow: true, confirm: rights === "confirm" || ALWAYS_CONFIRM.has(tool) };
   }
 
+  /** A remembered upload permission belongs to one agent on one site. */
+  function uploadGrantKey(agent, site) { return `${agent}\n${site}`; }
+
   /** Project chunk size: Native Messaging allows 64 MiB Chrome→host and 1 MiB host→Chrome. */
   function chunks(id, obj, size = 200000) {
     const s = JSON.stringify(obj);
@@ -59,7 +62,7 @@
     return out;
   }
 
-  const api = { DEFAULT_BLOCKLIST, READ_TOOLS, ACT_TOOLS, TAB_CONTENT_TOOLS, urlDenied, decide, chunks, hostOf };
+  const api = { DEFAULT_BLOCKLIST, READ_TOOLS, ACT_TOOLS, TAB_CONTENT_TOOLS, urlDenied, decide, uploadGrantKey, chunks, hostOf };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.maxagentPolicy = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

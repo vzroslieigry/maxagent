@@ -72,22 +72,51 @@ function maxagentPageOperation(request) {
     const signatures = {};
     const maximum = limit(request.maxElements, 400, 2000);
     const maxText = limit(request.maxText, 20000, 200000);
+    // Fast reading: only what is on the screen and/or only what matches the words the agent looks for.
+    const onlyVisible = request.viewport === true;
+    const query = String(request.query || "").toLowerCase().trim();
+    const light = onlyVisible || Boolean(query);
+    const slim = (d) => ({ elementId: d.elementId, tag: d.tag, role: d.role || undefined, name: compact(d.name, 120) || undefined,
+      text: compact(d.text, 120) || undefined, type: d.type || undefined, href: d.href || undefined, value: d.value || undefined,
+      editable: d.editable || undefined, disabled: d.disabled || undefined,
+      rect: { x: Math.round(d.rect.x), y: Math.round(d.rect.y), width: Math.round(d.rect.width), height: Math.round(d.rect.height) } });
+    const matches = (d) => (!onlyVisible || d.inViewport) && (!query || [d.name, d.text, d.domId, d.href].some((v) => String(v || "").toLowerCase().includes(query)));
+    const screenText = () => {
+      if (!document.body) return "";
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      const range = document.createRange();
+      const parts = [];
+      while (walker.nextNode()) {
+        const t = walker.currentNode;
+        const value = (t.nodeValue || "").trim();
+        const parent = t.parentElement;
+        if (!value || !parent || /^(SCRIPT|STYLE|NOSCRIPT)$/.test(parent.tagName)) continue;
+        range.selectNodeContents(t);
+        const b = range.getBoundingClientRect();
+        if (b.width && b.height && b.bottom > 0 && b.right > 0 && b.top < innerHeight && b.left < innerWidth && getComputedStyle(parent).visibility !== "hidden") parts.push(value);
+      }
+      return parts.join(" ");
+    };
     let truncated = false;
     const rootElementId = document.body ? "e0" : null;
     if (rootElementId) signatures.e0 = signature(document.body);
-    if (document.body) textParts.push(document.body.innerText || document.body.textContent || "");
+    if (document.body && !light) textParts.push(document.body.innerText || document.body.textContent || "");
+    if (onlyVisible && !query) textParts.push(screenText());
     walk((node, id, path) => {
       if (node.tagName === "IFRAME" && rendered(node)) {
         let url = null;
         try { url = node.contentDocument?.documentElement ? node.contentWindow.location.href : null; } catch { url = null; }
         if (url) {
           frames.push({ elementId: id, url, readable: true });
-          textParts.push(node.contentDocument.body?.innerText || "");
+          if (!light) textParts.push(node.contentDocument.body?.innerText || "");
         } else frames.push({ elementId: id, url: node.getAttribute("src"), readable: false, reason: "cross_origin_or_unavailable" });
         signatures[id] = signature(node);
       }
       if (node.matches(selector) && rendered(node)) {
-        if (elements.length < maximum) { elements.push(describe(node, id, path)); signatures[id] = signature(node); } else truncated = true;
+        const d = describe(node, id, path);
+        if (matches(d)) {
+          if (elements.length < maximum) { elements.push(light ? slim(d) : d); signatures[id] = signature(node); } else truncated = true;
+        }
       }
       return true;
     });
@@ -99,6 +128,7 @@ function maxagentPageOperation(request) {
       limitations: ["Closed shadow roots, canvas contents and cross-origin frames are not represented as DOM; use screenshot."],
     };
   }
+  if (request.action === "viewport") return { width: innerWidth, height: innerHeight };
   if (request.action === "page_scroll") {
     window.scrollBy({ left: Number(request.x) || 0, top: Number(request.y) || 0, behavior: "instant" });
     return { scrolled: true };
@@ -231,6 +261,21 @@ globalThis.maxagentDriver = {
     const capture = await chrome.debugger.sendCommand(target, "Page.captureScreenshot", { format: "jpeg", quality: 70, fromSurface: true, captureBeyondViewport: false });
     if (!capture?.data) throw new Error("screenshot_empty");
     return capture.data;
+  },
+  /** Shrink a screenshot to what models see without further scaling; pixels of this image are what click_at takes. */
+  async fitImage(data, maxSide = 1568) {
+    const bytes = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
+    const bitmap = await createImageBitmap(new Blob([bytes], { type: "image/jpeg" }));
+    const ratio = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+    const width = Math.round(bitmap.width * ratio), height = Math.round(bitmap.height * ratio);
+    if (ratio === 1) { bitmap.close(); return { data, width, height }; }
+    const canvas = new OffscreenCanvas(width, height);
+    canvas.getContext("2d").drawImage(bitmap, 0, 0, width, height);
+    bitmap.close();
+    const out = new Uint8Array(await (await canvas.convertToBlob({ type: "image/jpeg", quality: 0.75 })).arrayBuffer());
+    let text = "";
+    for (let i = 0; i < out.length; i += 0x8000) text += String.fromCharCode.apply(null, out.subarray(i, i + 0x8000));
+    return { data: btoa(text), width, height };
   },
   validateFiles(files) {
     if (!Array.isArray(files) || !files.length || files.length > 8) throw new Error("upload_file_count_invalid");

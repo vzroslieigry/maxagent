@@ -2,6 +2,11 @@
 
 Der Agent zeigt dem Besitzer nach einem Update einmal, was neu ist (Regeln, Abschnitt 8), und hinterlässt eine Notiz in `experience/maxagent.md`.
 
+## 0.5.3
+- Brücke: `snapshot` kann nur den sichtbaren Bereich lesen und Elemente nach Wörtern suchen – auf großen Seiten viel kleinere Antworten.
+- Brücke: `click_at` klickt nach Pixeln eines Screenshots – für Player und Canvas.
+- Brücke: Datei-Uploads lassen sich einmal oder immer für diesen Agenten auf dieser Website erlauben; Widerruf im Erweiterungsfenster.
+
 ## 0.5.2
 - Hinweise aus der Erfahrung stoppen Befehle und Suchen nicht mehr – sie kommen als Erinnerung.
 - Am Ende einer Antwort ergänzt der Agent nur, was wirklich fehlt.

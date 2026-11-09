@@ -8,7 +8,7 @@ const T = RU ? {
   warn: "Разрешайте только агентам, которые вы сами запустили. Если вы не ждали этого окна — нажмите «Запретить».",
   actionTitle: "Подтвердите действие агента",
   actionText: (r) => `<span class="who">${r.agent}</span>: ${r.tool}${r.site ? ` на ${r.site}` : ""}`,
-  allow: "Разрешить", deny: "Запретить",
+  allow: "Разрешить", once: "Разрешить один раз", remember: (s) => `Всегда для этого агента на ${s}`, deny: "Запретить",
 } : {
   pairTitle: "An agent asks for browser access",
   pairText: (a) => `<span class="who">${a}</span> wants to work in this browser: see tabs and pages and, if you allow, click and type. Your sign-ins stay yours.`,
@@ -18,7 +18,7 @@ const T = RU ? {
   warn: "Only allow agents you started yourself. If you did not expect this window, press Deny.",
   actionTitle: "Confirm the agent's action",
   actionText: (r) => `<span class="who">${r.agent}</span>: ${r.tool}${r.site ? ` on ${r.site}` : ""}`,
-  allow: "Allow", deny: "Deny",
+  allow: "Allow", once: "Allow once", remember: (s) => `Always for this agent on ${s}`, deny: "Deny",
 };
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -43,10 +43,17 @@ const id = new URLSearchParams(location.search).get("id");
     body.innerHTML = `<p>${T.actionText({ agent: esc(req.agent), tool: esc(req.tool), site: esc(req.site || "") })}</p>
       ${req.detail ? `<div class="detail">${esc(req.detail)}</div>` : ""}<p class="warn">${T.warn}</p>`;
   }
-  const answer = (allow) => {
+  const remember = document.getElementById("remember");
+  if (req.kind === "action" && req.canRemember) {
+    document.getElementById("allow").textContent = T.once;
+    remember.textContent = T.remember(req.site);
+    remember.hidden = false;
+  }
+  const answer = (allow, always = false) => {
     const rights = req.kind === "pair" ? document.querySelector('input[name="r"]:checked').value : undefined;
-    chrome.runtime.sendMessage({ type: "decision", id, answer: { allow, rights } });
+    chrome.runtime.sendMessage({ type: "decision", id, answer: { allow, rights, remember: always } });
   };
   document.getElementById("allow").onclick = () => answer(true);
+  remember.onclick = () => answer(true, true);
   document.getElementById("deny").onclick = () => answer(false);
 })();

@@ -2,6 +2,11 @@
 
 O agente mostra ao dono as novidades uma vez depois de uma atualização (regras, seção 8) e deixa uma nota em `experience/maxagent.md`.
 
+## 0.5.3
+- Ponte: `snapshot` pode ler só o que está na tela e buscar elementos por palavras: respostas muito menores em páginas grandes.
+- Ponte: `click_at` clica por pixels de uma captura, para players e canvas.
+- Ponte: o envio de arquivos pode ser permitido uma vez ou sempre para este agente neste site; revogue na janela da extensão.
+
 ## 0.5.2
 - As dicas da experiência não param mais comandos nem buscas: chegam como uma lembrança.
 - No fim da resposta o agente acrescenta só o que realmente falta.
