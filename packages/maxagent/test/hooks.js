@@ -352,7 +352,7 @@ if(a[0]==='config'&&a[1]==='set'){const f=${JSON.stringify(path.join(oh, '.openc
   const handlers = {};
   plugin.register({ on: (name, fn, opts) => { handlers[name] = { fn, opts }; } });
   check(plugin.id === 'maxagent' && plugin.configSchema.safeParse(undefined).success && !plugin.configSchema.safeParse({ x: 1 }).success, 'OpenClaw plugin: entry shape like definePluginEntry (id, empty config schema)');
-  check(handlers.before_prompt_build && handlers.before_tool_call && JSON.stringify(handlers.before_tool_call.opts.matcher) === JSON.stringify(['exec', 'web_search', 'web_fetch']), 'OpenClaw plugin: registers before_prompt_build and before_tool_call (exec, web_search, web_fetch)');
+  check(handlers.before_prompt_build && handlers.before_tool_call && JSON.stringify(handlers.before_tool_call.opts.matcher) === JSON.stringify(['exec', 'web_search', 'web_fetch', 'browser']), 'OpenClaw plugin: registers before_prompt_build and before_tool_call (exec, web_search, web_fetch, browser)');
   const pb = handlers.before_prompt_build.fn({ prompt: 'привет', messages: [] }, { sessionKey: 'k' });
   check(/Главные правила/.test(pb.appendSystemContext || '') && /Брифинг/.test(pb.prependContext || ''), 'OpenClaw plugin: core rules → system context, briefing → prompt context', JSON.stringify(pb).slice(0, 300));
   const blocked = handlers.before_tool_call.fn({ toolName: 'exec', params: { command: 'rm -rf ~' } }, { sessionKey: 'k', runId: 'r1' });
