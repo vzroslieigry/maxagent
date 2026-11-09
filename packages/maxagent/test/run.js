@@ -48,6 +48,11 @@ for (const lang of ['ru', 'en']) {
   ];
 
   // Dry run writes nothing.
+  {
+    const agentHome = fs.mkdtempSync(path.join(os.tmpdir(), 'maxagent-agent-'));
+    const g = spawnSync(process.execPath, [BIN, 'init', '--home', agentHome], { encoding: 'utf8', input: '' });
+    check(g.status === 2 && /Ask the owner/.test(g.stdout) && /--extras/.test(g.stdout) && !fs.existsSync(path.join(agentHome, '.maxagent', 'config.json')), 'init without a terminal: nothing installed, the questions go to the agent', g.stdout);
+  }
   let r = run('init', '--yes', '--lang', lang, '--home', home, '--dry-run');
   check(r.status === 0, 'dry-run exit 0');
   check(!fs.existsSync(ws) && !fs.existsSync(path.join(home, '.maxagent')), 'dry-run wrote nothing');
@@ -149,7 +154,7 @@ for (const lang of ['ru', 'en']) {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'maxagent-setup-'));
   fs.mkdirSync(path.join(home, '.claude'));
   const ws = path.join(home, 'mx');
-  const answer = (args, lines) => spawnSync(process.execPath, [BIN, ...args, '--home', home], { encoding: 'utf8', input: lines.join('\n') + '\n' });
+  const answer = (args, lines) => spawnSync(process.execPath, [BIN, ...args, '--home', home], { encoding: 'utf8', input: lines.join('\n') + '\n', env: { ...process.env, MAXAGENT_PIPED: '1' } });
   const cfgOf = () => JSON.parse(read(path.join(home, '.maxagent', 'config.json')));
   const block = (re) => (read(path.join(ws, 'AGENTS.md')).match(re) || [''])[0];
   const RULES = /<!-- maxagent:rules:start[\s\S]*?maxagent:rules:end -->/;
@@ -199,11 +204,11 @@ for (const lang of ['ru', 'en']) {
 {
   const U = require('../tools/update-check.js');
   const cfg = { version: '0.5.0', autoUpdate: true };
-  check(U.plan(cfg, { maxagent: '0.5.8', bridge: '0.5.8' }).action === 'install', 'self-update: newer patch, same number for both → installs itself');
+  check(U.plan(cfg, { maxagent: '0.5.9', bridge: '0.5.9' }).action === 'install', 'self-update: newer patch, same number for both → installs itself');
   check(U.plan(cfg, { maxagent: '0.6.0', bridge: '0.6.0' }).action === 'install', 'self-update: newer minor → installs itself');
   check(U.plan(cfg, { maxagent: '1.0.0', bridge: '1.0.0' }).action === 'ask', 'self-update: a new major version waits for the owner');
-  check(U.plan(cfg, { maxagent: '0.5.8', bridge: '0.5.0' }).action === 'none', 'self-update: agent and bridge numbers differ → wait for both');
-  check(U.plan({ ...cfg, autoUpdate: false }, { maxagent: '0.5.8', bridge: '0.5.8' }).action === 'ask', 'self-update off → only tells');
+  check(U.plan(cfg, { maxagent: '0.5.9', bridge: '0.5.0' }).action === 'none', 'self-update: agent and bridge numbers differ → wait for both');
+  check(U.plan({ ...cfg, autoUpdate: false }, { maxagent: '0.5.9', bridge: '0.5.9' }).action === 'ask', 'self-update off → only tells');
   check(U.plan(cfg, { maxagent: '0.5.0', bridge: '0.5.0' }).action === 'none', 'self-update: same version → nothing');
   const att = (repo) => ({ attestations: [{ predicateType: 'https://slsa.dev/provenance/v1', bundle: { dsseEnvelope: { payload: Buffer.from(JSON.stringify({ predicate: { buildDefinition: { externalParameters: { workflow: { repository: repo } } } } })).toString('base64') } } }] });
   check(U.provenanceRepo(att('https://github.com/vzroslieigry/maxagent')) === 'https://github.com/vzroslieigry/maxagent', 'provenance: our repository read from the attestation');

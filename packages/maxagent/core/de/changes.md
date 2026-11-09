@@ -2,6 +2,9 @@
 
 Der Agent zeigt dem Besitzer nach einem Update einmal, was neu ist (Regeln, Abschnitt 8), und hinterlässt eine Notiz in `experience/maxagent.md`.
 
+## 0.5.9
+- Installation durch einen Agenten: Der Assistent hängt nicht mehr und schweigt nicht; er fragt alles über den Agenten und endet mit einem Bericht.
+
 ## 0.5.8
 - Agenten wissen, was zu nutzen ist: zum Klicken, Tippen oder Lesen `snapshot`; um das Aussehen der Seite zu sehen, ein Screenshot.
 

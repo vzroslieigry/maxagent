@@ -2,6 +2,9 @@
 
 L’agent montre une fois au propriétaire les nouveautés après une mise à jour (règles, section 8) et laisse une note dans `experience/maxagent.md`.
 
+## 0.5.9
+- Installation par un agent : l'assistant ne se bloque plus et ne reste plus muet ; il pose tout au propriétaire via l'agent et finit par un rapport.
+
 ## 0.5.8
 - Les agents savent quoi utiliser : pour cliquer, saisir ou lire, `snapshot` ; pour voir l'apparence de la page, une capture.
 

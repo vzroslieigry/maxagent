@@ -2,6 +2,10 @@
 
 maxagent and maxagent-bridge always share one version number and are released together.
 
+## 0.5.9
+
+- Install by an agent: the wizard no longer hangs or stays silent — it asks the owner everything through the agent and ends with a report of what is installed.
+
 ## 0.5.8
 
 - Agents know which to use: to press, type or read — `snapshot`; to see how a page looks — a screenshot.

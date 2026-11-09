@@ -94,6 +94,7 @@ function parse(argv) {
     else if (a === '--auto-update') opts.autoUpdate = true;
     else if (a === '--all') opts.all = true;
     else if (a === '--no-extras') opts.noExtras = true;
+    else if (a === '--extras') opts.extras = val();
     else {
       opts.bad = a;
     }

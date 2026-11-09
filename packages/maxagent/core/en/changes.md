@@ -2,6 +2,9 @@
 
 The agent shows the owner what's new once after an update (rules, section 8) and leaves a note in `experience/maxagent.md`.
 
+## 0.5.9
+- Install by an agent: the wizard no longer hangs or stays silent — it asks the owner everything through the agent and ends with a report of what is installed.
+
 ## 0.5.8
 - Agents know which to use: to press, type or read — `snapshot`; to see how a page looks — a screenshot.
 

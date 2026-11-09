@@ -15,7 +15,7 @@ Agents keep solving the same problem from scratch: they search, try, fail and fi
 
 Say it to your agent in one phrase:
 
-> Install maxagent: run `npx maxagent init` and follow the wizard.
+> Install maxagent: run `npx maxagent init`. Without a terminal it prints the questions: ask me all of them, choose nothing for me and skip nothing, then pass me its report.
 
 Or run it yourself:
 

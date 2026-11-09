@@ -207,8 +207,47 @@ function settingsLines(cfg, home) {
 
 /* ---------- commands ---------- */
 
+/** Run by an agent there is no terminal: the owner's choices must reach the owner, not become silent defaults. */
+function agentGuide(home) {
+  const found = detectAgents(home).join(',') || 'none found';
+  return [
+    'maxagent: there is no terminal here, so the setup questions cannot be asked. Nothing was installed.',
+    'If you are an agent: do NOT choose for the owner and do NOT drop options. Ask the owner, in their language, in one message:',
+    '  1. Language: ru, en, es, zh, pt, de, fr, ja, ko, hi.',
+    '  2. Working folder (default: ~/maxagent).',
+    `  3. Which agents to connect (found: ${found}; default: all found).`,
+    '  4. Browser bridge: lets agents work in the owner\'s own Chrome. Yes/no (recommended: yes). The Chrome extension is then loaded by hand once.',
+    `  5. Meaning search over experience, about ${extras.VECTOR_MB} MB. Yes/no (recommended: yes).`,
+    '  6. Shared experience packs from other users. Yes/no (recommended: yes).',
+    '  7. Automatic updates. Yes/no (recommended: yes).',
+    '  8. Delete only to the Trash. Yes/no (recommended: yes).',
+    '  9. Remind the agent how to format answers (links, copy blocks). Yes/no (recommended: yes).',
+    '  10. Git repository for the working folder (optional URL).',
+    'Then run, with the owner\'s answers:',
+    '  npx maxagent init --yes --lang <lang> --workspace <folder> --agents <a,b> --bridge|--no-bridge --extras bridge,vectors,packs --auto-update|--no-auto-update --trash|--no-trash --answer-format|--no-answer-format [--repo <url>]',
+    '--extras lists only what the owner said yes to. Finally pass the report the command prints to the owner.',
+  ].join('\n');
+}
+
+/** What an agent must pass on after a run without a terminal. */
+function ownerReport(cfg, home, io) {
+  const has = (p) => { try { return fs.existsSync(p) && (!fs.statSync(p).isDirectory() || fs.readdirSync(p).length > 0); } catch { return false; } };
+  const yn = (v) => (v ? 'on' : 'off');
+  const item = (name, ok, cmd) => `  ${name}: ${ok ? 'installed' : `NOT installed (${cmd})`}`;
+  io.out([
+    '--- Tell the owner, in their language: ---',
+    `  Connected agents: ${cfg.agents.join(', ') || 'none'}`,
+    item('Browser bridge', has(path.join(home, '.maxagent-bridge', 'config.json')), 'npx maxagent bridge'),
+    item('Meaning search', has(path.join(home, '.maxagent', 'vector')), 'npx maxagent vectors'),
+    item('Shared experience', has(path.join(cfg.workspace, 'experience', 'shared')), 'npx maxagent experience add all'),
+    `  Settings: folder ${cfg.workspace}; language ${cfg.lang}; auto-update ${yn(cfg.autoUpdate !== false)}; Trash only ${yn(cfg.trash !== false)}; answer format ${yn(cfg.answerFormat !== false)}; git ${cfg.repo || 'off'}`,
+    '  Change settings: npx maxagent setup',
+  ].join('\n'));
+}
+
 async function init(opts, io) {
   const home = opts.home;
+  if (!opts.yes && !process.stdin.isTTY && !process.env.MAXAGENT_PIPED) { io.out(agentGuide(home)); return 2; }
   const prev = loadConfig(home);
   const rl = opts.yes ? null : io.rl();
   try {
@@ -276,6 +315,7 @@ async function init(opts, io) {
       io.out('');
       io.out(t(lang, 'initDone'));
       if (agents.includes('codex')) io.out(t(lang, 'codexHooksNote'));
+      if (opts.yes || !process.stdin.isTTY) ownerReport(cfg, home, io);
     }
     return 0;
   } finally {
@@ -507,13 +547,16 @@ function extrasSay(lang) {
  */
 async function runExtras(cfg, home, opts, io, rl) {
   const lang = cfg.lang;
+  const listed = opts.extras ? new Set(String(opts.extras).split(',').map((x) => x.trim())) : null;
+  if (listed) opts.all = true; // the owner has already answered: no more questions
   let mode = opts.all ? 'all' : opts.noExtras || !rl ? 'none' : '';
   if (!mode) {
     const a = String(await ask(rl, t(lang, 'askExtras', { mb: extras.VECTOR_MB }), t(lang, 'extrasAll'))).trim().toLowerCase();
     mode = new RegExp(t(lang, 'extrasAllRe'), 'i').test(a) ? 'all' : new RegExp(t(lang, 'extrasChooseRe'), 'i').test(a) ? 'choose' : 'none';
   }
   if (mode === 'none') { io.out(t(lang, 'extrasLater')); return; }
-  const want = async (key) => mode === 'all' || (await askYesNo(rl, lang, key, true));
+  const EXTRA = { askExtraBridge: 'bridge', askExtraVectors: 'vectors', askExtraPacks: 'packs' };
+  const want = async (key) => (listed ? listed.has(EXTRA[key]) : mode === 'all' || (await askYesNo(rl, lang, key, true)));
   const confirm = async (q) => mode === 'all' && opts.all ? true : askYesNo(rl, lang, q, true);
   const say = extrasSay(lang);
   const done = [];
