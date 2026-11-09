@@ -2,6 +2,9 @@
 
 The agent shows the owner what's new once after an update (rules, section 8) and leaves a note in `experience/maxagent.md`.
 
+## 0.5.8
+- Agents know which to use: to press, type or read — `snapshot`; to see how a page looks — a screenshot.
+
 ## 0.5.7
 - A normal `snapshot` now answers in short lines: the screen first, no empty backdrops or duplicates. The full JSON — `format="full"`.
 

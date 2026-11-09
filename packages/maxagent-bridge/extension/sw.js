@@ -7,7 +7,7 @@ const HOST = "com.maxagent.bridge";
 // Версия КОДА (не манифеста): по ней установщик видит, что Chrome действительно загрузил новый скрипт.
 // Chrome после перезапуска перечитывает манифест, но может держать старый код фонового скрипта из кэша (05.11.2026).
 // Поднимать вместе с "version" в manifest.json.
-const CODE_VERSION = "0.5.7";
+const CODE_VERSION = "0.5.8";
 const P = globalThis.maxagentPolicy;
 const D = globalThis.maxagentDriver;
 const LOG_MAX = 300;

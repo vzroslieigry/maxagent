@@ -2,6 +2,9 @@
 
 El agente muestra al dueño las novedades una vez tras una actualización (reglas, sección 8) y deja una nota en `experience/maxagent.md`.
 
+## 0.5.8
+- Los agentes saben qué usar: para pulsar, escribir o leer, `snapshot`; para ver cómo se ve la página, una captura.
+
 ## 0.5.7
 - El `snapshot` normal responde ahora con líneas cortas: primero lo visible, sin fondos vacíos ni duplicados. JSON completo: `format="full"`.
 

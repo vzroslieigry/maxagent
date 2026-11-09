@@ -2,6 +2,10 @@
 
 maxagent and maxagent-bridge always share one version number and are released together.
 
+## 0.5.8
+
+- Agents know which to use: to press, type or read — `snapshot`; to see how a page looks — a screenshot.
+
 ## 0.5.7
 
 - A normal `snapshot` now answers in short lines: the screen first, no empty backdrops or duplicates. The full JSON — `format="full"`.

@@ -2,6 +2,9 @@
 
 Der Agent zeigt dem Besitzer nach einem Update einmal, was neu ist (Regeln, Abschnitt 8), und hinterlässt eine Notiz in `experience/maxagent.md`.
 
+## 0.5.8
+- Agenten wissen, was zu nutzen ist: zum Klicken, Tippen oder Lesen `snapshot`; um das Aussehen der Seite zu sehen, ein Screenshot.
+
 ## 0.5.7
 - Der normale `snapshot` antwortet jetzt in kurzen Zeilen: zuerst der Bildschirm, ohne leere Hintergründe und Duplikate. Volles JSON: `format="full"`.
 
