@@ -114,6 +114,8 @@ function readJson(f, def) { try { return JSON.parse(fs.readFileSync(f, 'utf8'));
 
 if (require.main === module) (async () => {
   const cfg = readJson(path.join(ROOT, 'config.json'), null);
+  // The personal shelf of skills does not depend on the network or on update settings.
+  if (cfg && !process.argv.includes('--pending')) { try { require('./experience-skills.js').scan(); } catch { /* a convenience */ } }
   if (!cfg || cfg.updates === false) return;
   fs.mkdirSync(STATE_DIR, { recursive: true });
   // One updater at a time (several agent sessions start the hook); a lock older than an hour is stale.

@@ -519,6 +519,7 @@ function actionRecall(text, session, { minHits = 1, idx = build() } = {}) {
   const have = new Set(want);
   const trig = [];
   for (const a of idx.atoms) {
+    if (/^[^/]*\/skills\//.test(String(a.file).replace(/\\/g, '/'))) continue; // the skills shelf only reminds, it never stops a command
     let best = 0;
     for (const part of String(a.trigger || '').split(/\s+·\s+|;\s*/)) {
       const t = [...new Set(stems(part))];
@@ -567,7 +568,7 @@ function projectNames(root) {
 function lintProjects(text, file, root = libraryRoot()) {
   if (!root) return [];
   const rel = path.relative(root, file).replace(/\\/g, '/');
-  if (rel.startsWith('..') || /^(projects|shared)\//.test(rel)) return [];
+  if (rel.startsWith('..') || /^(projects|shared|skills)\//.test(rel)) return [];
   const escape = (w) => w.split(/\s+/).map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, (c) => `\\${c}`)).join('[\\s-]*');
   const errs = [];
   for (const { project, names } of projectNames(root)) {

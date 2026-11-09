@@ -56,6 +56,24 @@ const atom = (head, when, step) => `### ${head}\n- когда: ${when}\n- вещ
   check(/опыт пользователя maxagent, 2026/.test(fs.readFileSync(draftFile, 'utf8')) && !/тест, 08/.test(fs.readFileSync(draftFile, 'utf8')), 'share: the source line is neutral');
   check(packs.personalHits('Файл C:\\' + 'Users\\ivan\\a.txt').length === 1 && packs.personalHits('Файл C:\\Users\\<you>\\a.txt').length === 0 && packs.personalHits('ssh admin@192.168.1.5').length >= 1, 'share: personal paths and private addresses are found, placeholders are not');
 
+  // The personal shelf of skills: built from SKILL.md, reminds on a request, never stops a command.
+  const skillsHome = path.join(tmp, 'skills-home');
+  const skillDir = path.join(skillsHome, '.codex', 'skills', 'poster');
+  fs.mkdirSync(skillDir, { recursive: true });
+  fs.writeFileSync(path.join(skillDir, 'SKILL.md'), '---\nname: poster\ndescription: >-\n  Design a printable poster\n  with big type.\n---\n\nBody\n');
+  const macDir = path.join(skillsHome, '.codex', 'skills', 'other-os');
+  fs.mkdirSync(macDir, { recursive: true });
+  fs.writeFileSync(path.join(macDir, 'SKILL.md'), `---\nname: other-os\ndescription: Only elsewhere\nplatforms: [${process.platform === 'win32' ? 'macos' : 'windows'}]\n---\n`);
+  const sk = require('child_process').spawnSync(process.execPath, [path.join(__dirname, '..', 'tools', 'experience-skills.js'), 'scan'], { encoding: 'utf8', env: { ...process.env, MAXAGENT_SKILLS_HOME: skillsHome, MAXAGENT_EXPERIENCE: lib } });
+  const shelf = fs.readFileSync(path.join(lib, 'skills', 'codex.md'), 'utf8');
+  check(sk.status === 0 && /poster/.test(shelf) && /Design a printable poster with big type/.test(shelf) && !/other-os/.test(shelf), 'skills: folded description read, a skill for another system left out', shelf.slice(0, 300));
+  check(eng.lint(shelf, 'codex.md').length === 0, 'skills: the generated shelf passes the lint', JSON.stringify(eng.lint(shelf, 'codex.md')).slice(0, 300));
+  check(!/follow it|делать по нему/.test(shelf), 'skills: an atom is a memory, not an instruction');
+  const skillIdx = eng.build(lib);
+  check(eng.actionRecall('skill poster', 's-act', { idx: skillIdx }) === null, 'skills: never stop a command');
+  fs.rmSync(path.join(lib, 'skills'), { recursive: true, force: true });
+  eng.build(lib);
+
   // E060: an atom naming a private project lives in the project's folder.
   fs.mkdirSync(path.join(lib, 'projects', 'secret-shop'), { recursive: true });
   fs.writeFileSync(path.join(lib, 'projects', 'secret-shop', '_names.txt'), 'Тайная Лавка\n');

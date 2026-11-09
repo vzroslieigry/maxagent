@@ -222,7 +222,7 @@ function personalHits(text) {
 }
 
 // Never shared: habits of the owner, specific projects, how answers are handed to the owner, other people's packs.
-const SHARE_SKIP = new Set(['owner', 'projects', 'answer', 'shared']);
+const SHARE_SKIP = new Set(['owner', 'projects', 'answer', 'shared', 'skills']);
 // What belongs to this person's work rather than to the tool: the agent rewrites such an atom or leaves it out.
 const SITUATIONAL = [
   [/(^|[\s`"'(])projects[\\/][\w.-]+/i, 'файл личного проекта'],
