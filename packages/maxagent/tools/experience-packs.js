@@ -38,12 +38,12 @@ function scan(text) {
 
 /* ---------- net ---------- */
 
-function get(url, { max = MAX_BYTES, redirects = 5 } = {}) {
+function getOnce(url, { max = MAX_BYTES, redirects = 5 } = {}) {
   return new Promise((resolve, reject) => {
     const req = https.get(url, { headers: { 'User-Agent': 'maxagent' }, timeout: 30000 }, (res) => {
       if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && redirects > 0) {
         res.resume();
-        return resolve(get(new URL(res.headers.location, url).toString(), { max, redirects: redirects - 1 }));
+        return resolve(getOnce(new URL(res.headers.location, url).toString(), { max, redirects: redirects - 1 }));
       }
       if (res.statusCode !== 200) { res.resume(); return reject(new Error(`HTTP ${res.statusCode}: ${url}`)); }
       const chunks = [];
@@ -54,6 +54,17 @@ function get(url, { max = MAX_BYTES, redirects = 5 } = {}) {
     req.on('timeout', () => req.destroy(new Error('тайм-аут')));
     req.on('error', reject);
   });
+}
+
+/** GitHub's edge answers 504 now and then for one file and not for another: a failure of the network is worth repeating. */
+const TEMPORARY = /HTTP (429|5\d\d)|тайм-аут|ECONNRESET|ETIMEDOUT|EAI_AGAIN|ENOTFOUND|socket hang up/;
+async function get(url, opts) {
+  for (let attempt = 0; ; attempt++) {
+    try { return await getOnce(url, opts); } catch (e) {
+      if (attempt >= 5 || !TEMPORARY.test(String(e.message))) throw e;
+      await new Promise((r) => setTimeout(r, 2000 * 2 ** attempt));
+    }
+  }
 }
 
 /* ---------- install ---------- */
@@ -97,11 +108,15 @@ async function add(names) {
   const cat = await catalog();
   const want = names.includes('all') ? cat.packs : cat.packs.filter((p) => names.includes(p.name));
   if (!want.length) { out(`нет таких наборов. Есть: ${cat.packs.map((p) => p.name).join(', ')}`); return 1; }
+  const failed = [];
   for (const p of want) {
     out(`${p.name} v${p.version} (${Math.round((p.size || 0) / 1024)} КБ) — скачиваю…`);
-    const r = installBundle(await get(p.url), p);
-    out(`  установлен: ${r.files} файлов, готовых векторов ${r.vectors}`);
+    try {
+      const r = installBundle(await get(p.url), p);
+      out(`  установлен: ${r.files} файлов, готовых векторов ${r.vectors}`);
+    } catch (e) { failed.push(p.name); out(`  не установлен: ${e.message}`); }
   }
+  if (failed.length) { out(`не установились: ${failed.join(', ')}. Повторить: npx maxagent experience add ${failed.join(' ')}`); return 1; }
   return 0;
 }
 
@@ -337,5 +352,5 @@ async function main(argv) {
   return 2;
 }
 
-module.exports = { scan, installBundle, adopt, build, share, shareCheck, personalHits };
+module.exports = { get, scan, installBundle, adopt, build, share, shareCheck, personalHits };
 if (require.main === module) main(process.argv.slice(2)).then((c) => { process.exitCode = c; });

@@ -2,6 +2,9 @@
 
 Der Agent zeigt dem Besitzer nach einem Update einmal, was neu ist (Regeln, Abschnitt 8), und hinterlässt eine Notiz in `experience/maxagent.md`.
 
+## 0.5.6
+- Gemeinsame Pakete: Downloads werden bei GitHub-Fehlern wiederholt, ein fehlgeschlagenes Paket stoppt die anderen nicht mehr; `doctor` warnt nicht mehr vor Paket-Kopfzeilen.
+
 ## 0.5.5
 - Der schnelle `snapshot` antwortet in kurzen Zeilen statt JSON – der Bildschirm braucht ein Vielfaches weniger.
 

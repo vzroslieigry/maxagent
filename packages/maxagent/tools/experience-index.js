@@ -61,7 +61,8 @@ function build(workspace, lang = 'en') {
   const L = TXT[lang] || TXT.en;
   const rows = [];
   const problems = [];
-  const files = walk(path.join(workspace, 'experience')).map((f) => path.relative(workspace, f).replace(/\\/g, '/')).sort();
+  // Shared packs and the shelf of skills are generated and found by search: they have no place in the owner's table.
+  const files = walk(path.join(workspace, 'experience')).map((f) => path.relative(workspace, f).replace(/\\/g, '/')).filter((f) => !/^experience\/(shared|skills)\//.test(f)).sort();
   for (const rel of files) {
     const h = header(fs.readFileSync(path.join(workspace, rel), 'utf8'));
     if (!h || !h.title || !h.task || !h.aliases) { problems.push(L.noHeader(rel)); continue; }

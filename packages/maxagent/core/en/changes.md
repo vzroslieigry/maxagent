@@ -2,6 +2,9 @@
 
 The agent shows the owner what's new once after an update (rules, section 8) and leaves a note in `experience/maxagent.md`.
 
+## 0.5.6
+- Shared packs: downloads are retried on GitHub failures and one failed pack no longer stops the others; `doctor` no longer warns about pack headers.
+
 ## 0.5.5
 - The fast `snapshot` answers in short lines instead of JSON — the screen takes several times less.
 

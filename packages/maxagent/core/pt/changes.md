@@ -2,6 +2,9 @@
 
 O agente mostra ao dono as novidades uma vez depois de uma atualização (regras, seção 8) e deixa uma nota em `experience/maxagent.md`.
 
+## 0.5.6
+- Pacotes compartilhados: o download é repetido em falhas do GitHub e um pacote com erro não impede os outros; `doctor` não avisa mais sobre cabeçalhos de pacotes.
+
 ## 0.5.5
 - O `snapshot` rápido responde em linhas curtas em vez de JSON: a tela ocupa várias vezes menos.
 
