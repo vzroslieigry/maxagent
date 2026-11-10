@@ -484,6 +484,7 @@ function askCheck(input) {
 }
 
 function pretool(input) {
+  track(input);
   const { command, tool } = commandOf(input);
   const br = browserPretool(tool, command);
   if (br) return br;
@@ -529,24 +530,102 @@ function stop(input) {
       }
     }
   }
-  const shell = 0, edits = rework; // names kept for the message below
   if (wrote || !(research > 0 || rework > 0)) return null;
   // Fact check: an experience file modified since the turn started counts, however it was written.
-  const t0 = Date.parse((entries[start] || {}).timestamp || '') || 0;
-  // Entries live in subfolders (experience/<kind>/…), so walk the whole tree.
-  const files = [];
-  const walkExp = (dir, depth) => {
+  if (expChangedSince(Date.parse((entries[start] || {}).timestamp || '') || 0)) return null;
+  return { decision: 'block', reason: L.stop(didText(research, rework)) };
+}
+
+const didText = (research, edits) => [research && `${L.did.research}: ${research}`, edits && `${L.did.edits}: ${edits}`].filter(Boolean).join(', ');
+
+/** An experience file was modified at or after t0 (entries live in subfolders, so the whole tree is walked). */
+function expChangedSince(t0) {
+  if (!t0) return false;
+  const lib = ENG ? ENG.libraryRoot(CFG) : path.join(CFG.workspace, 'experience');
+  const walk = (dir, depth) => {
     let list = [];
-    try { list = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
-    for (const e of list) {
+    try { list = fs.readdirSync(dir, { withFileTypes: true }); } catch { return false; }
+    return list.some((e) => {
       const p = path.join(dir, e.name);
-      if (e.isDirectory()) { if (depth < 6) walkExp(p, depth + 1); } else files.push(p);
-    }
+      if (e.isDirectory()) return depth < 6 && walk(p, depth + 1);
+      try { return fs.statSync(p).mtimeMs >= t0; } catch { return false; }
+    });
   };
-  walkExp(lib, 0);
-  if (t0 && files.some((f) => { try { return fs.statSync(f).mtimeMs >= t0; } catch { return false; } })) return null;
-  const did = [research && `${L.did.research}: ${research}`, shell && `${L.did.shell}: ${shell}`, edits && `${L.did.edits}: ${edits}`].filter(Boolean).join(', ');
-  return { decision: 'block', reason: L.stop(did) };
+  return walk(lib, 0);
+}
+
+/* ---------- Stop: experience recorded? (every other agent: the hook keeps its own ledger of the turn) ---------- */
+
+// Agents without a transcript we can read (Antigravity, Codex, OpenClaw, Hermes): the tool events of the turn are
+// counted into state/turn-<session>.json; a new owner's message starts a new ledger.
+const EDIT_TOOLS = /^(Write|Edit|MultiEdit|NotebookEdit|apply_patch|write|edit|write_file|patch|write_to_file|replace_file_content|multi_replace_file_content)$/;
+const SHELL_TOOLS = /^(Bash|PowerShell|shell|exec_command|run_command|exec|terminal)$/i;
+const NOT_CODE_EDIT = /[\\/](scratchpad|memory|inbox|te?mp)[\\/]|\.(md|txt)$/i;
+const sessionOf = (input) => String(input.session_id || input.conversationId || 'default');
+const ledgerFile = (session) => path.join(ROOT, 'state', `turn-${session.replace(/[^\w.-]/g, '_')}.json`);
+const saveLedger = (session, led) => { try { fs.mkdirSync(path.join(ROOT, 'state'), { recursive: true }); fs.writeFileSync(ledgerFile(session), JSON.stringify(led)); } catch { /* state is a convenience */ } };
+
+/** The previous turn did research or rework, never recorded experience and was never told so → that reminder. */
+function ledgerMissed(led) {
+  if (!led || led.wrote || led.asked || !(led.research > 0 || led.rework > 0) || !CFG.workspace) return '';
+  return expChangedSince(led.t0) ? '' : L.stop(didText(led.research, led.rework));
+}
+
+/**
+ * A new owner's message: a new ledger. The same message again is the same turn (OpenClaw and Hermes call this before
+ * every model call). Returns the reminder for a previous turn that ended unrecorded where no end-of-turn check ran
+ * (Hermes has no end-of-turn event outside code edits).
+ */
+function ledgerStart(input, message) {
+  if (AGENT === 'claude-code') return '';
+  const session = sessionOf(input);
+  const key = String(message || '').slice(0, 300);
+  const prev = readJson(ledgerFile(session), null);
+  if (prev && prev.key === key) return '';
+  saveLedger(session, { key, t0: Date.now(), research: 0, ran: false, rework: 0, wrote: false });
+  return ledgerMissed(prev);
+}
+
+function editedFiles(tool, ti) {
+  const files = [ti.file_path, ti.notebook_path, ti.path, ti.TargetFile, ti.target_file].filter((f) => typeof f === 'string' && f);
+  if (/patch/i.test(tool)) {
+    const text = [ti.command, ti.patch, ti.input].filter((t) => typeof t === 'string').join('\n');
+    for (const m of text.matchAll(/^\*\*\* (?:Update|Add|Delete) File: (.+)$/gm)) files.push(m[1].trim());
+  }
+  return files;
+}
+
+/** One tool call into the ledger: web research, a command run, a code edit after a run (rework), experience written. */
+function track(input) {
+  if (AGENT === 'claude-code') return;
+  const session = sessionOf(input);
+  const led = readJson(ledgerFile(session), null);
+  if (!led) return;
+  const { tool, command } = commandOf(input);
+  const ti = AGENT === 'antigravity' ? (input.toolCall && input.toolCall.args) || {} : input.tool_input || {};
+  const lib = ENG ? ENG.libraryRoot(CFG) : CFG.workspace ? path.join(CFG.workspace, 'experience') : '';
+  const isExp = (f) => /(^|[\\/])experience[\\/]/i.test(f) || (lib && path.resolve(input.cwd || '.', f).toLowerCase().startsWith(path.resolve(lib).toLowerCase() + path.sep));
+  if (WEB_TOOLS.test(tool)) led.research++;
+  else if (SHELL_TOOLS.test(tool)) { if (/experience[\\/]/i.test(command)) led.wrote = true; else led.ran = true; }
+  else if (EDIT_TOOLS.test(tool)) {
+    for (const f of editedFiles(tool, ti)) {
+      if (isExp(f)) led.wrote = true;
+      else if (led.ran && !NOT_CODE_EDIT.test(f)) led.rework++;
+    }
+  } else return;
+  saveLedger(session, led);
+}
+
+/** End of a turn for every agent but Claude Code: research or rework, and experience did not change → once. */
+function ledgerCheck(input) {
+  if (input.stop_hook_active || AGENT === 'claude-code') return null;
+  const session = sessionOf(input);
+  const led = readJson(ledgerFile(session), null);
+  const reason = ledgerMissed(led);
+  if (!reason) return null;
+  led.asked = true;
+  saveLedger(session, led);
+  return { decision: 'block', reason };
 }
 
 /* ---------- Stop: "done" without a check (Claude Code transcript) ---------- */
@@ -663,6 +742,8 @@ function browserPretool(tool, command) {
 const ERROR_RE = /error|exception|not recognized|not found|not a valid|invalid|unexpected|cannot|failed|denied|traceback|no such|не удалось|ошибка|не является|не найден|не удаётся/i;
 function posttool(input) {
   const tool = String(input.tool_name || '');
+  // OpenClaw and Hermes show edits only after the call (their pretool sees commands and web only).
+  if ((AGENT === 'openclaw' || AGENT === 'hermes') && EDIT_TOOLS.test(tool)) track(input);
   const resp = typeof input.tool_response === 'string' ? input.tool_response : JSON.stringify(input.tool_response || '');
   const ctx = (text) => ({ hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext: text } });
   if (/^mcp__maxagent-bridge__/.test(tool)) return BRIDGE_DOWN.test(resp) ? ctx(L.bridgeDown) : null;
@@ -913,8 +994,9 @@ function run(raw) {
   if (EVENT === 'prompt') {
     const prompt = String(input.prompt || '');
     // Meaning needs the query vector from the background model process (≤1.5 s); without it — words only.
+    const missed = ledgerStart(input, prompt);
     const vec = ENG && ENG.queryVector ? ENG.queryVector(prompt) : Promise.resolve(null);
-    return vec.then((qvec) => plainText(hint(prompt, input.session_id || input.conversationId || 'default', qvec).join('\n') + '\n'));
+    return vec.then((qvec) => plainText([...hint(prompt, input.session_id || input.conversationId || 'default', qvec), ...(missed ? [missed] : [])].join('\n') + '\n'));
   }
   if (EVENT === 'start') return plainText(sessionStart(input));
   if (EVENT === 'invocation') {
@@ -924,11 +1006,12 @@ function run(raw) {
     const user = agUserTurn(input);
     const session = input.conversationId || 'antigravity';
     const memories = takeMemories(session);
+    const missed = user ? ledgerStart(input, user) : '';
     if (input.invocationNum !== 0 && !user) return memories.length ? JSON.stringify({ injectSteps: [{ ephemeralMessage: memories.join('\n\n') }] }) : '{}';
     const rules = input.invocationNum === 0 ? sessionStart({}) : '';
     const vec = user && ENG && ENG.queryVector ? ENG.queryVector(user) : Promise.resolve(null);
     return vec.then((qvec) => {
-      const lines = [...(user ? hint(user, session, qvec) : [L.reminder]), ...memories];
+      const lines = [...(user ? hint(user, session, qvec) : [L.reminder]), ...memories, ...(missed ? [missed] : [])];
       return JSON.stringify({ injectSteps: [{ ephemeralMessage: (rules ? rules + '\n' : '') + lines.join('\n') }] });
     });
   }
@@ -946,7 +1029,7 @@ function run(raw) {
     const mark = path.join(ROOT, 'state', `ag-stop-${id}.json`);
     if (readJson(mark, {}).user === turn.user) return '{}';
     const ag = { session_id: input.conversationId || 'default', cwd: (input.workspacePaths || [])[0], last_assistant_message: turn.text };
-    const sync = [askCheck(ag), adoptCheck(ag)].filter(Boolean).map((r) => r.reason);
+    const sync = [ledgerCheck(ag), askCheck(ag), adoptCheck(ag)].filter(Boolean).map((r) => r.reason);
     const fmt = formatCheck(ag);
     return answerCheck(ag).then((ans) => {
       const reasons = [fmt, ans, ...sync].filter(Boolean);
@@ -956,10 +1039,9 @@ function run(raw) {
     });
   }
   if (EVENT === 'stop') {
-    // Claude Code: "experience recorded?" (its transcript format is known), then "asking the owner for something experience covers?".
-    // Codex: only the request check (it passes last_assistant_message).
+    // "Experience recorded?": Claude Code — by its transcript; the others — by the hook's own ledger of the turn.
     // All end-of-turn checks become ONE stop with all reasons (a second stop is never made: stop_hook_active).
-    const sync = [AGENT === 'claude-code' ? stop(input) : null, AGENT === 'claude-code' ? doneCheck(input) : null, askCheck(input), adoptCheck(input)]
+    const sync = [AGENT === 'claude-code' ? stop(input) : ledgerCheck(input), AGENT === 'claude-code' ? doneCheck(input) : null, askCheck(input), adoptCheck(input)]
       .filter(Boolean).map((r) => r.reason);
     const fmt = formatCheck(input);
     return answerCheck(input).then((ans) => {

@@ -2,6 +2,9 @@
 
 Der Agent zeigt dem Besitzer nach einem Update einmal, was neu ist (Regeln, Abschnitt 8), und hinterlässt eine Notiz in `experience/maxagent.md`.
 
+## 0.5.12
+- Die Prüfung „Erfahrung nicht festgehalten“ gilt jetzt für alle Agenten: Antigravity, Codex, OpenClaw und Hermes — der Hook führt selbst Buch über den Zug (Suche, Ausführungen, Code-Korrekturen). In Hermes kommt die Erinnerung mit der nächsten Nachricht des Besitzers.
+
 ## 0.5.11
 - OpenClaw und Hermes gleichauf mit den anderen: Erfahrung erreicht das Modell vor und nach Befehlen, Geschriebenes wird geprüft, der eingebaute Browser ist bei gewählter Brücke aus; neue Agenten kommen beim Update dazu.
 

@@ -204,11 +204,11 @@ for (const lang of ['ru', 'en']) {
 {
   const U = require('../tools/update-check.js');
   const cfg = { version: '0.5.0', autoUpdate: true };
-  check(U.plan(cfg, { maxagent: '0.5.11', bridge: '0.5.11' }).action === 'install', 'self-update: newer patch, same number for both → installs itself');
+  check(U.plan(cfg, { maxagent: '0.5.12', bridge: '0.5.12' }).action === 'install', 'self-update: newer patch, same number for both → installs itself');
   check(U.plan(cfg, { maxagent: '0.6.0', bridge: '0.6.0' }).action === 'install', 'self-update: newer minor → installs itself');
   check(U.plan(cfg, { maxagent: '1.0.0', bridge: '1.0.0' }).action === 'ask', 'self-update: a new major version waits for the owner');
-  check(U.plan(cfg, { maxagent: '0.5.11', bridge: '0.5.0' }).action === 'none', 'self-update: agent and bridge numbers differ → wait for both');
-  check(U.plan({ ...cfg, autoUpdate: false }, { maxagent: '0.5.11', bridge: '0.5.11' }).action === 'ask', 'self-update off → only tells');
+  check(U.plan(cfg, { maxagent: '0.5.12', bridge: '0.5.0' }).action === 'none', 'self-update: agent and bridge numbers differ → wait for both');
+  check(U.plan({ ...cfg, autoUpdate: false }, { maxagent: '0.5.12', bridge: '0.5.12' }).action === 'ask', 'self-update off → only tells');
   check(U.plan(cfg, { maxagent: '0.5.0', bridge: '0.5.0' }).action === 'none', 'self-update: same version → nothing');
   const att = (repo) => ({ attestations: [{ predicateType: 'https://slsa.dev/provenance/v1', bundle: { dsseEnvelope: { payload: Buffer.from(JSON.stringify({ predicate: { buildDefinition: { externalParameters: { workflow: { repository: repo } } } } })).toString('base64') } } }] });
   check(U.provenanceRepo(att('https://github.com/vzroslieigry/maxagent')) === 'https://github.com/vzroslieigry/maxagent', 'provenance: our repository read from the attestation');

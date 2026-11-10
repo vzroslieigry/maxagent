@@ -256,6 +256,43 @@ agLine({ step_index: 9, type: 'USER_INPUT', content: 'а теперь превь
 agLine({ step_index: 10, type: 'PLANNER_RESPONSE', content: 'Превью: [thumb.png](D:/clips/thumb.png)' });
 check(hook('antigravity', 'stop', agIn) === '{}', 'Antigravity Stop: a well-formatted answer — allowed to stop');
 
+// "Experience recorded?" for every agent: the hook keeps its own ledger of the turn (no transcript needed).
+const NAG = /опыт \(experience\/\) не менялся/;
+const stopReason = (s) => { const o = parsed(s); return (o && o.reason) || ''; };
+hook('codex', 'prompt', { session_id: 'lx1', prompt: 'какая версия у antigravity' });
+hook('codex', 'pretool', { session_id: 'lx1', tool_name: 'WebSearch', tool_input: { query: 'antigravity version' } });
+out = stopReason(hook('codex', 'stop', { session_id: 'lx1', last_assistant_message: 'Версия 2.1.' }));
+check(NAG.test(out) && /поиск/.test(out), 'Codex stop: searched the web, experience untouched → experience?', out.slice(0, 200));
+check(!NAG.test(stopReason(hook('codex', 'stop', { session_id: 'lx1', last_assistant_message: 'Версия 2.1.' }))), 'Codex stop: said once per turn');
+hook('codex', 'prompt', { session_id: 'lx2', prompt: 'узнай версию' });
+hook('codex', 'pretool', { session_id: 'lx2', tool_name: 'WebSearch', tool_input: { query: 'version' } });
+hook('codex', 'pretool', { session_id: 'lx2', tool_name: 'apply_patch', tool_input: { command: '*** Begin Patch\n*** Add File: experience/agents/x.md\n+x\n*** End Patch' } });
+check(!NAG.test(stopReason(hook('codex', 'stop', { session_id: 'lx2', last_assistant_message: 'Версия 2.1.' }))), 'Codex stop: experience written by apply_patch → let go');
+hook('codex', 'prompt', { session_id: 'lx3', prompt: 'запусти тесты' });
+hook('codex', 'pretool', bash('npm test', 'lx3'));
+hook('codex', 'pretool', { session_id: 'lx3', tool_name: 'Edit', tool_input: { file_path: path.join(home, 'app', 'README.md') } });
+check(!NAG.test(stopReason(hook('codex', 'stop', { session_id: 'lx3', last_assistant_message: 'Тесты прошли.' }))), 'Codex stop: ordinary steps (a run, a doc edit) → no nagging');
+// OpenClaw: commands before the call, edits after it.
+hook('openclaw', 'prompt', { session_id: 'oc-l', prompt: 'почини сборку' });
+hook('openclaw', 'pretool', { session_id: 'oc-l', tool_name: 'exec', tool_input: { command: 'npm run build' } });
+hook('openclaw', 'posttool', { session_id: 'oc-l', tool_name: 'edit', tool_input: { path: 'src/build.js' }, tool_response: 'ok' });
+check(NAG.test(stopReason(hook('openclaw', 'stop', { session_id: 'oc-l', last_assistant_message: 'Сборка починена, проверено.' }))), 'OpenClaw stop: code fixed after a run → experience?');
+// Hermes: no end-of-turn event outside code edits — a missed turn is said with the next owner's message.
+hook('hermes', 'prompt', { session_id: 'hm-l', prompt: 'найди, как обновить hermes' });
+hook('hermes', 'pretool', { session_id: 'hm-l', tool_name: 'web_search', tool_input: { query: 'hermes update' } });
+check(!NAG.test(hook('hermes', 'prompt', { session_id: 'hm-l', prompt: 'найди, как обновить hermes' })), 'Hermes: the same message again is the same turn');
+out = hook('hermes', 'prompt', { session_id: 'hm-l', prompt: 'спасибо, дальше' });
+check(NAG.test(out), 'Hermes: previous turn searched and recorded nothing → said with the next message', out.slice(-300));
+check(!NAG.test(hook('hermes', 'prompt', { session_id: 'hm-l', prompt: 'ещё одно' })), 'Hermes: said once');
+// Antigravity: the ledger starts with the owner's message from its transcript.
+const agL = path.join(home, 'ag-ledger.jsonl');
+fs.writeFileSync(agL, JSON.stringify({ step_index: 0, type: 'USER_INPUT', content: '<USER_REQUEST>какая версия antigravity</USER_REQUEST>' }) + '\n');
+hook('antigravity', 'invocation', { invocationNum: 0, conversationId: 'agL', transcriptPath: agL });
+hook('antigravity', 'pretool', { conversationId: 'agL', toolCall: { name: 'search_web', args: { query: 'antigravity version' } } });
+fs.appendFileSync(agL, JSON.stringify({ step_index: 2, type: 'PLANNER_RESPONSE', content: 'Версия 2.1.' }) + '\n');
+out = parsed(hook('antigravity', 'stop', { conversationId: 'agL', transcriptPath: agL, terminationReason: 'NO_TOOL_CALL' }));
+check(out && out.decision === 'continue' && NAG.test(out.reason), 'Antigravity Stop: searched, experience untouched → continue with "experience?"', JSON.stringify(out).slice(0, 200));
+
 // The answer: format rule every time; plain paths/commands in the finished answer → one stop; the answer shelf
 // (experience/answer/) is searched with the text of the answer, not the request (decision 08.11.2026).
 out = hook('claude-code', 'prompt', { session_id: 'fmt', prompt: 'подготовь выпуск' });

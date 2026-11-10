@@ -2,6 +2,9 @@
 
 El agente muestra al dueño las novedades una vez tras una actualización (reglas, sección 8) y deja una nota en `experience/maxagent.md`.
 
+## 0.5.12
+- La comprobación «experiencia no registrada» ahora funciona en todos los agentes: Antigravity, Codex, OpenClaw y Hermes — el hook lleva su propio registro del turno (búsqueda, ejecuciones, correcciones de código). En Hermes el aviso llega con el siguiente mensaje del dueño.
+
 ## 0.5.11
 - OpenClaw y Hermes al nivel de los demás: la experiencia llega al modelo antes y después de los comandos, se comprueba lo escrito, el navegador integrado se desactiva con el puente; los agentes nuevos se añaden al actualizar.
 
