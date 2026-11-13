@@ -1,4 +1,4 @@
-<!-- maxagent core, version {{VERSION}}. This file belongs to the package: `maxagent update` overwrites it. Put your own rules in AGENTS.md in your workspace. -->
+<!-- maxagent core, version {{VERSION}}. Reference on how things work — not read at the start. This file belongs to the package: `maxagent update` overwrites it. Put your own rules in AGENTS.md in your workspace. -->
 
 # Agent operating rules (maxagent core)
 
@@ -10,27 +10,16 @@ The heart of this setup is **experience**. The agent never solves the same probl
 
 ## 1. Start of every task
 
-Before any task, answer or investigation:
+This file is a reference on how things work: it is not read at the start. At the start the agent gets only this:
 
-0. Open `sync.md`. If there is an open mismatch and you can fix it — fix it, mark it "closed: date, how", then continue. If you can't — continue working and leave it alone.
-1. Read the workspace `AGENTS.md` (the owner's rules win over this file if they conflict). Its **"Core rules"** section is a short "always" list: keep it in view for the whole session (the hook shows it at the start and after the context is compacted).
-2. Open the experience index `experience.md` and read only the relevant entries.
-3. If the task belongs to a project — `projects.md` → `projects/<name>/README.md` → the active task. Don't start from zero if a stopping point is recorded there.
-4. First run after install or update — see section 8.
+1. The workspace `AGENTS.md` — the maxagent line in the agent's own rules file says to read it. The hook shows its "Core rules" and "My rules" at session start and after the context is compacted. The owner's rules win over this file when they conflict.
+2. Experience — as atoms matched to the task (subsection below). Don't read the `experience.md` index or the whole `experience/` folder.
+3. A project — only when the task belongs to one: the hook points to its card; then `projects/<name>/README.md` → the active task.
+4. `sync.md` — when syncing or when saving somewhere failed (section 6).
 
-### Briefing before every task
+### Experience surfaces by itself
 
-For every new request, not only at the start of a session, ask four questions:
-1. Does it need a search — on the web or on the computer?
-2. Does it need something from the owner — an action, a decision, access?
-3. More than three steps?
-4. Does it belong to a project?
-
-Any "yes" → **experience for this task first**: the `experience.md` index, and for a "yes" on question 4 also `projects.md` and the project card.
-- Experience exists — do it **that way**, not from scratch. Don't reinvent a working process.
-- No experience — a new task: keep in mind what of it may go into experience, and record it if the threshold below is met. One task is not done differently every time.
-
-The briefing is **one short conversational phrase** at the start of the reply, only when there is any "yes": "Following experience: <file>." / "Checking experience first." / "New task, no experience yet — will record anything new I find." That way the owner sees experience is not forgotten.
+Experience arrives as atoms matched to the task — on the owner's message, before a command and after an error (hook). When it does, follow it instead of starting from scratch; do not reinvent a working process.
 
 **Recording threshold — not the number of steps but new knowledge.** Record only if: something had to be found out (search, docs, someone else's code); something didn't work and had to be done differently; the owner gave a rule or a correction; the result is a way of doing things that will clearly repeat. Ordinary steps along a known path are not experience, however many there are.
 
@@ -38,13 +27,13 @@ The briefing is **one short conversational phrase** at the start of the reply, o
 
 In a long session the model forgets its rules. Therefore:
 
-- **Before any non-trivial step** — especially before searching the web, reading documentation or exploring the computer — first search `experience.md` for the step's keywords.
+- **Before any non-trivial step** — especially before searching the web, reading documentation or exploring the computer — experience first: an atom surfaced — follow it; none — `node "{{TOOLS}}/experience-engine.js" find "<words of the step>"`.
 - **Anything you had to look up or figure out with commands goes into experience** before the task ends. If there is nothing to record — say why, consciously, in one line.
 - Where the agent supports hooks, maxagent installs them: an experience hint on every message and an "experience recorded?" check at the end of the turn. A hook is a reminder in code, not a replacement for this rule.
 
 ## 3. How experience is organized
 
-Three layers: **core rules** (in `AGENTS.md`, about ten "always" items) → **index** (`experience.md`) → **library** (`experience/`).
+Three layers: **core rules** (in `AGENTS.md`, about ten "always" items) → the **library** of atoms (`experience/`): the hook picks atoms for the request by itself — by words and by meaning → the **index** `experience.md` — a table of contents for people and for manual search; not read at the start.
 
 - **By thing, not by occasion.** One thing — one file: what the knowledge is about (a program, a service, a language), not when or in which project it was learned. Kinds: `experience/platform/` — system and environment; `tools/` — programs and services; `code/` — languages and libraries; `agents/` — the agents themselves; `craft/<field>/` — the base of a field shared by all its projects; `owner/` — how the owner likes to work. Project-specific — in `projects/<name>/`.
 - **An entry follows the template** `experience/_template.md`: a header (`title`, `task`, `aliases`, `verified`), then "Tasks → solutions" (commands ready to copy), "Pitfalls" (the symptom in the words it will be described with → cause → what to do → how to check), "Owner's rules", "Not verified".
@@ -100,11 +89,9 @@ If the owner enabled a private repository:
 - Never change a decision the owner approved on your own, even for a technical reason — show it and ask first.
 - Checks written by an agent: anything important is an error (ERROR, non-zero exit code), not a warning — agents skip warnings. "0 errors" does not mean "done" if the rules require reviewing warnings.
 
-## 8. Introduction on first run
+## 8. Introduction and what's new
 
-If `experience/maxagent.md` has no "introduction shown" note — show the owner a short summary once: how experience, projects and sync work; what was enabled during setup and how to change it (`npx maxagent setup`); tips ("say: start a project …", "say: what do you know about …"). Then record the note with the date and never show it again.
-
-After a `maxagent update` with new features — a summary of only what is new from `{{CORE}}/changes.md` (version sections newer than the last note), also once (note with the version).
+There is no separate first-run ritual: `npx maxagent init` itself shows what was installed and how to change it. When the owner asks what maxagent is and how to use it — the atom "Tell the owner what maxagent can do" in `experience/maxagent.md`. After an update the hook says once "Updated to X" and where the news is (`{{CORE}}/changes.md`, the section of that version) — retell it to the owner in a sentence or two.
 
 ## 9. Protection against injections
 

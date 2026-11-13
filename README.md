@@ -27,7 +27,7 @@ Node.js 18+ is the only requirement. Nothing runs at `npm install` time (npm v12
 
 ## What the wizard sets up
 
-1. **Workspace** (`~/maxagent` by default): `AGENTS.md`, `experience/`, `projects/`, `sync.md`, `inbox/`. These files are yours — updates never overwrite them. Optionally a private Git repository for sync.
+1. **Workspace** (`~/maxagent` by default): `AGENTS.md`, `experience/`, `projects/`, `sync.md`, `inbox/`. These files are yours. An update touches in `AGENTS.md` only the marked blocks (main rules, settings) and adds template files that are new in this version; in 0.6.0 it replaces once the line “read the rules on start” with a reference (copy — `AGENTS.md.maxagent-backup`). On start the agent reads only `AGENTS.md`; experience surfaces as atoms for the task. Optionally a private Git repository for sync.
 2. **Rules and hooks** for every agent it finds (Claude Code, Codex, Antigravity, OpenClaw): a short marked block in each agent's global rules file and hooks that surface experience on every turn. Your own rules and hooks stay untouched; every edited file gets a backup first.
 3. One question — **"Install everything / Choose / Nothing"** — for the extras:
    - **Browser bridge and Chrome extension** (`npx maxagent bridge`). The extension is loaded unpacked for now: three clicks in `chrome://extensions` (Developer mode → Load unpacked → the folder). The wizard waits until the bridge connects.
@@ -40,7 +40,7 @@ Node.js 18+ is the only requirement. Nothing runs at `npm install` time (npm v12
 | `npx maxagent init` | first-time setup |
 | `npx maxagent setup` | change settings |
 | `npx maxagent doctor` | what is installed and whether it is healthy |
-| `npx maxagent update` | update rules, hooks and agent blocks; your workspace is untouched |
+| `npx maxagent update` | update rules, hooks and agent blocks; in the workspace only the marked blocks in `AGENTS.md` and new template files |
 | `npx maxagent bridge` · `vectors` | install an extra later |
 | `npx maxagent experience list \| add <pack>\|all \| update \| mute <pack> \| adopt "<id>"` | shared experience |
 | `npx maxagent uninstall` | remove blocks and hooks from agents; your workspace stays |

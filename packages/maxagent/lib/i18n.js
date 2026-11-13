@@ -105,6 +105,9 @@ const MSG = {
     dRulesMissing: 'в {path} нет блока главных правил (метки maxagent:rules) — выполните npx maxagent update',
     dRulesOld: 'главные правила не совпадают с настройками — выполните npx maxagent update',
     dRulesOk: 'главные правила на месте',
+    agentsMigrated: 'AGENTS.md: строка «прочитай регламент на старте» заменена справкой (копия — AGENTS.md.maxagent-backup)',
+    agentsMigrateManual: 'AGENTS.md: строка про регламент на старте изменена вами — не трогаю; уберите её сами, чтобы агент не читал регламент на старте',
+    dCoreStart: 'AGENTS.md: строка про регламент на старте — выполните npx maxagent update (заменит её, если вы её не меняли) или уберите её сами, чтобы агент не читал регламент на старте',
   },
   en: {
     askLang: 'Language for rules and agent replies [ru/en/es/zh/pt/de/fr/ja/ko/hi]',
@@ -205,6 +208,9 @@ const MSG = {
     dRulesMissing: '{path} has no core rules block (maxagent:rules markers) — run npx maxagent update',
     dRulesOld: 'core rules do not match the settings — run npx maxagent update',
     dRulesOk: 'core rules in place',
+    agentsMigrated: 'AGENTS.md: the "read the package rules at the start" line was replaced by a reference (copy: AGENTS.md.maxagent-backup)',
+    agentsMigrateManual: 'AGENTS.md: the line about reading the package rules at the start was changed by you — leaving it alone; remove it yourself so the agent does not read the rules at the start',
+    dCoreStart: 'AGENTS.md: the line about reading the package rules at the start — run npx maxagent update (it replaces the line if you did not change it) or remove it yourself so the agent does not read the rules at the start',
   },
   es: {
     askLang: 'Idioma de las reglas y de las respuestas del agente [ru/en/es/zh/pt/de/fr/ja/ko/hi]',
@@ -305,6 +311,9 @@ const MSG = {
     dRulesMissing: '{path} no tiene el bloque de reglas principales (marcas maxagent:rules) — ejecuta npx maxagent update',
     dRulesOld: 'las reglas principales no coinciden con los ajustes — ejecuta npx maxagent update',
     dRulesOk: 'reglas principales en su sitio',
+    agentsMigrated: 'AGENTS.md: la línea «lee el reglamento al empezar» se sustituyó por una referencia (copia: AGENTS.md.maxagent-backup)',
+    agentsMigrateManual: 'AGENTS.md: la línea sobre leer el reglamento al empezar fue cambiada por ti — no la toco; quítala tú para que el agente no lea el reglamento al empezar',
+    dCoreStart: 'AGENTS.md: la línea sobre leer el reglamento al empezar — ejecuta npx maxagent update (la sustituye si no la cambiaste) o quítala tú para que el agente no lea el reglamento al empezar',
   },
   pt: {
     askLang: 'Idioma das regras e das respostas do agente [ru/en/es/zh/pt/de/fr/ja/ko/hi]',
@@ -405,6 +414,9 @@ const MSG = {
     dRulesMissing: '{path} não tem o bloco de regras principais (marcas maxagent:rules) — execute npx maxagent update',
     dRulesOld: 'as regras principais não batem com as configurações — execute npx maxagent update',
     dRulesOk: 'regras principais no lugar',
+    agentsMigrated: 'AGENTS.md: a linha «leia o regulamento ao começar» foi substituída por uma referência (cópia: AGENTS.md.maxagent-backup)',
+    agentsMigrateManual: 'AGENTS.md: a linha sobre ler o regulamento ao começar foi alterada por você — não mexo nela; remova-a você mesmo para que o agente não leia o regulamento ao começar',
+    dCoreStart: 'AGENTS.md: a linha sobre ler o regulamento ao começar — execute npx maxagent update (ele a substitui se você não a alterou) ou remova-a você mesmo para que o agente não leia o regulamento ao começar',
   },
   de: {
     askLang: 'Sprache der Regeln und der Agenten-Antworten [ru/en/es/zh/pt/de/fr/ja/ko/hi]',
@@ -505,6 +517,9 @@ const MSG = {
     dRulesMissing: '{path} hat keinen Block mit Hauptregeln (Markierungen maxagent:rules) — führen Sie npx maxagent update aus',
     dRulesOld: 'die Hauptregeln passen nicht zu den Einstellungen — führen Sie npx maxagent update aus',
     dRulesOk: 'Hauptregeln vorhanden',
+    agentsMigrated: 'AGENTS.md: die Zeile «Regeln zu Beginn lesen» wurde durch einen Verweis ersetzt (Kopie: AGENTS.md.maxagent-backup)',
+    agentsMigrateManual: 'AGENTS.md: die Zeile zum Lesen der Paketregeln zu Beginn wurde von Ihnen geändert — ich lasse sie unberührt; entfernen Sie sie selbst, damit der Agent die Regeln nicht zu Beginn liest',
+    dCoreStart: 'AGENTS.md: die Zeile zum Lesen der Paketregeln zu Beginn — führen Sie npx maxagent update aus (ersetzt sie, falls unverändert) oder entfernen Sie sie selbst, damit der Agent die Regeln nicht zu Beginn liest',
   },
   fr: {
     askLang: 'Langue des règles et des réponses de l’agent [ru/en/es/zh/pt/de/fr/ja/ko/hi]',
@@ -605,6 +620,9 @@ const MSG = {
     dRulesMissing: '{path} n’a pas de bloc de règles principales (marqueurs maxagent:rules) — lancez npx maxagent update',
     dRulesOld: 'les règles principales ne correspondent pas aux réglages — lancez npx maxagent update',
     dRulesOk: 'règles principales en place',
+    agentsMigrated: 'AGENTS.md : la ligne « lis le règlement au démarrage » a été remplacée par une référence (copie : AGENTS.md.maxagent-backup)',
+    agentsMigrateManual: 'AGENTS.md : la ligne sur la lecture du règlement au démarrage a été modifiée par vous — je n’y touche pas ; supprimez-la vous-même pour que l’agent ne lise pas le règlement au démarrage',
+    dCoreStart: 'AGENTS.md : la ligne sur la lecture du règlement au démarrage — lancez npx maxagent update (il la remplace si vous ne l’avez pas modifiée) ou supprimez-la vous-même pour que l’agent ne lise pas le règlement au démarrage',
   },
   zh: {
     askLang: '规则和智能体回复的语言 [ru/en/es/zh/pt/de/fr/ja/ko/hi]',
@@ -705,6 +723,9 @@ const MSG = {
     dRulesMissing: '{path} 中没有核心规则区块（maxagent:rules 标记）— 请运行 npx maxagent update',
     dRulesOld: '核心规则与设置不一致 — 请运行 npx maxagent update',
     dRulesOk: '核心规则就位',
+    agentsMigrated: 'AGENTS.md：“启动时阅读规则”这一行已替换为说明（备份：AGENTS.md.maxagent-backup）',
+    agentsMigrateManual: 'AGENTS.md：关于启动时阅读规则的这一行已被您修改 — 我不会改动；请自行删除，以免智能体在启动时阅读规则',
+    dCoreStart: 'AGENTS.md：关于启动时阅读规则的这一行 — 请运行 npx maxagent update（若您未修改过，它会替换该行），或自行删除，以免智能体在启动时阅读规则',
   },
   ja: {
     askLang: 'ルールとエージェントの返答の言語 [ru/en/es/zh/pt/de/fr/ja/ko/hi]',
@@ -805,6 +826,9 @@ const MSG = {
     dRulesMissing: '{path} に主要ルールのブロック（maxagent:rules マーカー）がありません — npx maxagent update を実行してください',
     dRulesOld: '主要ルールが設定と一致しません — npx maxagent update を実行してください',
     dRulesOk: '主要ルールは正常',
+    agentsMigrated: 'AGENTS.md：「開始時に規則を読む」行を参照説明に置き換えました（コピー：AGENTS.md.maxagent-backup）',
+    agentsMigrateManual: 'AGENTS.md：開始時に規則を読む行はあなたが変更したため、触れません。エージェントが開始時に規則を読まないよう、ご自身で削除してください',
+    dCoreStart: 'AGENTS.md：開始時に規則を読む行があります — npx maxagent update を実行する（変更していなければ置き換えます）か、エージェントが開始時に規則を読まないようご自身で削除してください',
   },
   ko: {
     askLang: '규칙과 에이전트 답변의 언어 [ru/en/es/zh/pt/de/fr/ja/ko/hi]',
@@ -905,6 +929,9 @@ const MSG = {
     dRulesMissing: '{path}에 핵심 규칙 블록(maxagent:rules 표시)이 없습니다 — npx maxagent update를 실행하세요',
     dRulesOld: '핵심 규칙이 설정과 맞지 않습니다 — npx maxagent update를 실행하세요',
     dRulesOk: '핵심 규칙 정상',
+    agentsMigrated: 'AGENTS.md: “시작 시 규정 읽기” 줄을 안내 문구로 바꿨습니다 (사본: AGENTS.md.maxagent-backup)',
+    agentsMigrateManual: 'AGENTS.md: 시작 시 규정을 읽는 줄을 직접 수정하셨으므로 건드리지 않습니다. 에이전트가 시작 시 규정을 읽지 않도록 직접 지워 주세요',
+    dCoreStart: 'AGENTS.md: 시작 시 규정을 읽는 줄이 있습니다 — npx maxagent update를 실행하거나(수정하지 않았다면 바꿔 줍니다) 에이전트가 시작 시 규정을 읽지 않도록 직접 지워 주세요',
   },
   hi: {
     askLang: 'नियमों और एजेंट के जवाबों की भाषा [ru/en/es/zh/pt/de/fr/ja/ko/hi]',
@@ -1005,6 +1032,9 @@ const MSG = {
     dRulesMissing: '{path} में मुख्य नियमों का ब्लॉक (maxagent:rules चिह्न) नहीं है — npx maxagent update चलाएँ',
     dRulesOld: 'मुख्य नियम सेटिंग्स से मेल नहीं खाते — npx maxagent update चलाएँ',
     dRulesOk: 'मुख्य नियम अपनी जगह हैं',
+    agentsMigrated: 'AGENTS.md: «शुरू में नियम पढ़ो» वाली पंक्ति को संदर्भ-पाठ से बदल दिया गया (प्रति: AGENTS.md.maxagent-backup)',
+    agentsMigrateManual: 'AGENTS.md: शुरू में नियम पढ़ने वाली पंक्ति आपने बदली है — मैं उसे नहीं छूता; एजेंट शुरू में नियम न पढ़े, इसलिए उसे खुद हटा दें',
+    dCoreStart: 'AGENTS.md: शुरू में नियम पढ़ने वाली पंक्ति मौजूद है — npx maxagent update चलाएँ (यदि आपने उसे नहीं बदला तो वह उसे बदल देगा) या एजेंट शुरू में नियम न पढ़े, इसलिए उसे खुद हटा दें',
   },
 };
 

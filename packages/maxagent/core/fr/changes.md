@@ -1,6 +1,12 @@
 # Nouveautés de maxagent
 
-L’agent montre une fois au propriétaire les nouveautés après une mise à jour (règles, section 8) et laisse une note dans `experience/maxagent.md`.
+Après une mise à jour, le hook affiche une fois « Mis à jour vers X » — l’agent raconte au propriétaire la section de cette version.
+
+## 0.6.0
+- Au démarrage, l'agent ne lit que le `AGENTS.md` du dossier de travail : le règlement `AGENTS.core.md` devient une référence, et `sync.md`, l'index d'expérience et `projects.md` ne sont plus lus au démarrage — l'expérience remonte sous forme d'atomes selon la tâche. La mise à jour remplace une seule fois, dans votre `AGENTS.md`, la ligne « lis le règlement » par une référence (copie — `AGENTS.md.maxagent-backup`) ; « Mes règles » ne sont pas touchées.
+- Les « Règles principales » ne contiennent plus la langue ni le format de réponse : la langue est dans la section « Réglages », et le format de réponse est rappelé par le hook à chaque message.
+- Après une compression de mémoire, les atomes d'expérience réapparaissent dans la même session ; le briefing en quatre questions est supprimé.
+- La mise à jour ne dépose dans le dossier de travail que les nouveaux fichiers de modèle de cette version et ne restaure pas ceux que vous avez supprimés. Nouveau : atomes sur le travail avec les projets (`experience/agents/projects.md`).
 
 ## 0.5.12
 - La vérification « expérience non consignée » marche désormais pour tous les agents : Antigravity, Codex, OpenClaw et Hermes — le hook tient son propre journal du tour (recherche, exécutions, corrections de code). Dans Hermes, le rappel arrive avec le message suivant du propriétaire.

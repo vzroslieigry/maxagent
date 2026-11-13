@@ -87,6 +87,71 @@ function blockBody(cfg) {
   return t(cfg.lang, 'blockText', { ws: path.join(cfg.workspace, 'AGENTS.md') });
 }
 
+/* ---------- migration of AGENTS.md installed by 0.5.12 and older ---------- */
+
+/**
+ * The 0.5.12 template told the agent to read the package rules at the start of every task. The package never rewrites
+ * the owner's AGENTS.md, so without this the old text would stay forever. Replaced once, only when the text matches the
+ * old template exactly (M1: the "package rules" line, M2: the phrase in the header); the owner's other text is not touched.
+ * The paragraph that replaces M1 is taken from the current template, so the migration and a fresh install do not drift apart.
+ */
+const MIGRATE = {
+  ru: {
+    m1: /^## Регламент пакета(\r?\n)\r?\nПеред любой задачей прочитай `([^`\r\n]*)AGENTS\.core\.md` и выполни раздел «Старт любой задачи»\.(?=\r?\n|$)/m,
+    m2: ['Агент читает файл в начале каждой задачи вместе с регламентом пакета; главные правила и раздел «Мои правила» хук показывает ему в начале сессии и после сжатия памяти.', 'Здесь — только критически важное для любого агента; остальное всплывает атомами опыта под задачу. Главные правила и «Мои правила» хук показывает в начале сессии и после сжатия памяти.'],
+  },
+  en: {
+    m1: /^## Package rules(\r?\n)\r?\nBefore any task, read `([^`\r\n]*)AGENTS\.core\.md` and follow the "Start of every task" section\.(?=\r?\n|$)/m,
+    m2: ['The agent reads this file at the start of every task together with the package rules; the hook shows it the core rules and the "My rules" section at session start and after the context is compacted.', 'Only what is critical for any agent lives here; everything else surfaces as experience atoms matched to the task. The hook shows the core rules and "My rules" at session start and after the context is compacted.'],
+  },
+};
+/** A line that still tells the agent to read the package rules at the start (M3). */
+const startsWithCore = (text) => text.split(/\r?\n/).some((l) => l.includes('AGENTS.core.md') && /Старт любой задачи|Start of every task/.test(l));
+
+/** Heading and paragraph of the "Package reference" section of the current template (ru/en), `{{CORE}}/AGENTS.core.md` still in it. */
+function referenceOf(lang) {
+  const text = fs.readFileSync(path.join(PKG_ROOT, 'template', lang, 'AGENTS.md'), 'utf8').replace(/\r\n/g, '\n');
+  const m = text.match(/^(## [^\n]+)\n\n([^\n]*\{\{CORE\}\}\/AGENTS\.core\.md[^\n]*)\n/m);
+  if (!m || !/^## (Справка о пакете|Package reference)$/.test(m[1])) throw new Error(`template ${lang}: no package reference section`);
+  return { head: m[1], para: m[2] };
+}
+
+function migrateAgentsMd(cfg, w) {
+  const file = path.join(cfg.workspace, 'AGENTS.md');
+  const text = readText(file);
+  if (text === null) return; // dry run before the template exists
+  let next = text;
+  for (const lang of Object.keys(MIGRATE)) {
+    const { head, para } = referenceOf(lang);
+    next = next.replace(MIGRATE[lang].m1, (m, eol, dir) => [head, '', para.replace('{{CORE}}/AGENTS.core.md', () => dir + 'AGENTS.core.md')].join(eol));
+    const [from, to] = MIGRATE[lang].m2;
+    next = next.split(from).join(to);
+  }
+  if (startsWithCore(next)) { w.note(t(cfg.lang, 'agentsMigrateManual')); return; } // M3: not ours to rewrite
+  if (next === text) return;
+  w.copyOnce(file, file + '.maxagent-backup', t(cfg.lang, 'backup'));
+  w.write(file, next, t(cfg.lang, 'agentsMigrated'));
+}
+
+/**
+ * Files of the workspace template that appeared in a given version (paths relative to template/<lang>/, with /).
+ * `update` creates only these, and only when the file is missing: a template file the owner deleted does not come back.
+ */
+const TEMPLATE_ADDED = { '0.6.0': ['experience/agents/projects.md'] };
+
+/** Is version `v` newer than `from` (missing `from` counts as 0)? */
+function isNewer(v, from) {
+  const a = String(v).split('.').map(Number);
+  const b = String(from || '0').split('.').map(Number);
+  for (let i = 0; i < 3; i++) if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) > (b[i] || 0);
+  return false;
+}
+
+/** The template files added in versions newer than `from`. */
+function addedSince(from) {
+  return new Set(Object.keys(TEMPLATE_ADDED).filter((v) => isNewer(v, from)).flatMap((v) => TEMPLATE_ADDED[v]));
+}
+
 /* ---------- shared steps ---------- */
 
 /** Package rules: always overwritten from the package (core belongs to the package). */
@@ -99,13 +164,17 @@ function installCore(cfg, home, w) {
   }
 }
 
-/** Workspace skeleton: copied once; an existing file is never touched. */
-function installTemplate(cfg, home, w, quiet = false) {
+/**
+ * Workspace skeleton: copied once; an existing file is never touched.
+ * `only` (a Set of template paths) limits it to those files — `update` passes the files new in this version.
+ */
+function installTemplate(cfg, home, w, { quiet = false, only = null } = {}) {
   // A language without its own template yet (package languages grow faster than templates) uses the English one.
   let src = path.join(PKG_ROOT, 'template', cfg.lang);
   if (!fs.existsSync(src)) src = path.join(PKG_ROOT, 'template', 'en');
   const v = vars(cfg, home);
   for (const rel of walk(src)) {
+    if (only && !only.has(rel.split(path.sep).join('/'))) continue;
     // npm never ships files named .gitignore, so the template keeps it as "gitignore".
     const dest = path.join(cfg.workspace, rel === 'gitignore' ? '.gitignore' : rel);
     if (fs.existsSync(dest)) {
@@ -295,6 +364,7 @@ async function init(opts, io) {
     installCore(cfg, home, w);
     installTools(cfg, home, w);
     installTemplate(cfg, home, w);
+    migrateAgentsMd(cfg, w);
     applyRules(cfg, w);
     probeEnv(cfg, w);
     buildIndex(cfg, w);
@@ -332,12 +402,7 @@ function requireConfig(home, io) {
 
 /** Sections of core/<lang>/changes.md for versions newer than `from`. */
 function whatsNew(lang, from) {
-  const newer = (v) => {
-    const a = String(v).split('.').map(Number);
-    const b = String(from || '0').split('.').map(Number);
-    for (let i = 0; i < 3; i++) if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) > (b[i] || 0);
-    return false;
-  };
+  const newer = (v) => isNewer(v, from);
   let text = '';
   try { text = fs.readFileSync(path.join(PKG_ROOT, 'core', lang, 'changes.md'), 'utf8'); } catch { return []; }
   const out = [];
@@ -386,7 +451,8 @@ async function update(opts, io) {
   withDefaults(cfg, home);
   installCore(cfg, home, w);
   installTools(cfg, home, w);
-  installTemplate(cfg, home, w, true); // adds only files that are new in this version; existing ones are never touched
+  installTemplate(cfg, home, w, { quiet: true, only: addedSince(from) }); // adds only files that are new in this version; those the owner deleted do not come back
+  migrateAgentsMd(cfg, w);
   applyRules(cfg, w);
   probeEnv(cfg, w);
   buildIndex(cfg, w);
@@ -459,6 +525,7 @@ async function doctor(opts, io) {
   if (wsRules !== null && !rules.RE.test(wsRules)) line('err', t(lang, 'dRulesMissing', { path: path.join(cfg.workspace, 'AGENTS.md') }));
   else if (wsRules !== null && rules.withRules(wsRules, withDefaults({ ...cfg }, home), LANG_NAMES[cfg.lang] || cfg.lang) !== wsRules) line('warn', t(lang, 'dRulesOld'));
   else if (wsRules !== null) line('ok', t(lang, 'dRulesOk'));
+  if (wsRules !== null && startsWithCore(wsRules)) line('warn', t(lang, 'dCoreStart'));
   if (fs.existsSync(path.join(cfg.workspace, 'experience.md'))) {
     const ix = expIndex.run(cfg.workspace, { check: true, lang: cfg.lang });
     if (ix.code) line('warn', `${t(lang, 'indexLabel')}: ${ix.lines.filter((l) => l.startsWith('ERROR')).map((l) => l.slice(7)).join('; ')} — npx maxagent index`);

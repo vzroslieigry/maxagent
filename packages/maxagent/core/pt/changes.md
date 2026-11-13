@@ -1,6 +1,12 @@
 # Novidades do maxagent
 
-O agente mostra ao dono as novidades uma vez depois de uma atualização (regras, seção 8) e deixa uma nota em `experience/maxagent.md`.
+Depois de uma atualização, o hook diz uma vez «Atualizado para X» — o agente conta ao dono a seção dessa versão.
+
+## 0.6.0
+- No início, o agente lê apenas o `AGENTS.md` da pasta de trabalho: o regulamento `AGENTS.core.md` virou referência, e `sync.md`, o índice de experiência e `projects.md` deixaram de ser lidos no início — a experiência aparece em átomos conforme a tarefa. A atualização substitui uma vez, no seu `AGENTS.md`, a linha “leia o regulamento” por uma referência (cópia — `AGENTS.md.maxagent-backup`); “Minhas regras” não são alteradas.
+- As “Regras principais” não têm mais idioma nem formato de resposta: o idioma fica na seção “Configurações”, e o formato da resposta é lembrado pelo hook a cada mensagem.
+- Depois da compressão de memória, os átomos de experiência voltam a aparecer na mesma sessão; o briefing de quatro perguntas foi removido.
+- A atualização coloca na pasta de trabalho apenas os novos arquivos de modelo desta versão e não restaura os que você apagou. Novo: átomos sobre trabalho com projetos (`experience/agents/projects.md`).
 
 ## 0.5.12
 - A verificação «experiência não registrada» agora vale para todos os agentes: Antigravity, Codex, OpenClaw e Hermes — o hook mantém seu próprio registro do turno (busca, execuções, correções de código). No Hermes o lembrete vem com a próxima mensagem do dono.

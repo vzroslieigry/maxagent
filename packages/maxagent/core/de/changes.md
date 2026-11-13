@@ -1,6 +1,12 @@
 # Neu in maxagent
 
-Der Agent zeigt dem Besitzer nach einem Update einmal, was neu ist (Regeln, Abschnitt 8), und hinterlässt eine Notiz in `experience/maxagent.md`.
+Nach einem Update meldet der Hook einmal „Aktualisiert auf X“ — der Agent erzählt dem Besitzer den Abschnitt dieser Version.
+
+## 0.6.0
+- Beim Start liest der Agent nur die `AGENTS.md` des Arbeitsordners: die Regeln `AGENTS.core.md` sind jetzt ein Nachschlagewerk, und `sync.md`, der Erfahrungsindex und `projects.md` werden beim Start nicht mehr gelesen — Erfahrung taucht als Atome zur jeweiligen Aufgabe auf. Das Update ersetzt einmal in Ihrer `AGENTS.md` die Zeile „lies die Regeln“ durch einen Hinweis (Kopie — `AGENTS.md.maxagent-backup`); „Meine Regeln“ bleiben unberührt.
+- In den „Hauptregeln“ stehen Sprache und Antwortformat nicht mehr: Die Sprache steht im Abschnitt „Einstellungen“, das Antwortformat erinnert der Hook bei jeder Nachricht.
+- Nach einer Speicherkomprimierung tauchen Erfahrungsatome in derselben Sitzung wieder auf; das Briefing mit vier Fragen wurde entfernt.
+- Das Update legt im Arbeitsordner nur neue Vorlagendateien dieser Version ab und stellt von Ihnen gelöschte nicht wieder her. Neu: Atome zur Arbeit mit Projekten (`experience/agents/projects.md`).
 
 ## 0.5.12
 - Die Prüfung „Erfahrung nicht festgehalten“ gilt jetzt für alle Agenten: Antigravity, Codex, OpenClaw und Hermes — der Hook führt selbst Buch über den Zug (Suche, Ausführungen, Code-Korrekturen). In Hermes kommt die Erinnerung mit der nächsten Nachricht des Besitzers.

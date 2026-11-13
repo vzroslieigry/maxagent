@@ -10,7 +10,7 @@ npx maxagent init
 
 `init` asks a few questions (language, workspace folder, which agents to connect, optional private GitHub repo), then:
 
-- creates your workspace (`~/maxagent` by default): `AGENTS.md`, `experience.md` + `experience/`, `projects.md` + `projects/`, `sync.md` — these files are yours, the package never overwrites them;
+- creates your workspace (`~/maxagent` by default): `AGENTS.md`, `experience.md` + `experience/`, `projects.md` + `projects/`, `sync.md` — these files are yours: an update touches in them only the marked blocks in `AGENTS.md` and adds new template files;
 - installs the package rules to `~/.maxagent/core/`;
 - adds a short marked block to each agent's global rules file pointing to your workspace.
 
@@ -18,7 +18,7 @@ npx maxagent init
 |---|---|
 | `npx maxagent init` | first-time setup |
 | `npx maxagent doctor` | what is installed and whether it is healthy |
-| `npx maxagent update` | update package rules and agent blocks; your workspace is untouched |
+| `npx maxagent update` | update package rules and agent blocks; in the workspace only the marked blocks in `AGENTS.md` and new template files |
 | `npx maxagent uninstall` | remove the blocks from agents; your workspace stays |
 
 Options: `--lang ru|en`, `--workspace <path>`, `--agents claude-code,codex,antigravity,openclaw`, `--repo <url>`, `--yes`, `--dry-run`.
@@ -37,4 +37,4 @@ License: MIT.
 npx maxagent init
 ```
 
-Рабочая папка (`~/maxagent`) принадлежит вам — пакет её не перезаписывает. `doctor` — проверка, `update` — обновление регламента, `uninstall` — убрать блоки у агентов (рабочая папка остаётся).
+Рабочая папка (`~/maxagent`) принадлежит вам — обновление трогает в ней только блоки с метками в `AGENTS.md` и новые файлы шаблона. `doctor` — проверка, `update` — обновление регламента, `uninstall` — убрать блоки у агентов (рабочая папка остаётся).

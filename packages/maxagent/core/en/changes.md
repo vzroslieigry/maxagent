@@ -1,6 +1,12 @@
 # What's new in maxagent
 
-The agent shows the owner what's new once after an update (rules, section 8) and leaves a note in `experience/maxagent.md`.
+After an update the hook says once "Updated to X" — the agent retells the section of that version to the owner.
+
+## 0.6.0
+- At start the agent reads only the workspace `AGENTS.md`: the `AGENTS.core.md` rules became a reference, and `sync.md`, the experience index and `projects.md` are no longer read at start — experience surfaces as atoms for the task. The update replaces once, in your `AGENTS.md`, the line “read the rules” with a reference (copy — `AGENTS.md.maxagent-backup`); “My rules” are not touched.
+- The “Main rules” no longer contain the language and response format: the language is in the “Settings” section, and the hook reminds about the response format on every message.
+- After memory compression, experience atoms surface again in the same session; the four-question briefing is removed.
+- The update adds to the workspace only the new template files of this version and does not bring back the ones you deleted. New: atoms about working with projects (`experience/agents/projects.md`).
 
 ## 0.5.12
 - The "experience not recorded" check now works for every agent: Antigravity, Codex, OpenClaw and Hermes — the hook keeps its own ledger of the turn (search, runs, code fixes). In Hermes the reminder comes with the owner’s next message.

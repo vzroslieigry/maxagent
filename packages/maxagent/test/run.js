@@ -100,7 +100,7 @@ for (const lang of ['ru', 'en']) {
   // Core rules: built from settings, owner's text around the block kept.
   const wsAgents = path.join(ws, 'AGENTS.md');
   const ruleCount = (read(wsAgents).split(/maxagent:rules:start[^\n]*\n/)[1] || '').split('<!-- maxagent:rules:end')[0].split('\n').filter((l) => /^\d+\. /.test(l)).length;
-  check(ruleCount >= 10 && ruleCount <= 14, `core rules: ${ruleCount} items`);
+  check(ruleCount >= 8 && ruleCount <= 12, `core rules: ${ruleCount} items`);
   // Personal words of the author's own workspace, kept out of the source itself (public repository check).
   const personal = new RegExp(['Отче', 'J' + 'eka'].join('|'), 'i');
   check(!personal.test(read(wsAgents)), 'core rules: nothing personal');
@@ -154,7 +154,8 @@ for (const lang of ['ru', 'en']) {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'maxagent-setup-'));
   fs.mkdirSync(path.join(home, '.claude'));
   const ws = path.join(home, 'mx');
-  const answer = (args, lines) => spawnSync(process.execPath, [BIN, ...args, '--home', home], { encoding: 'utf8', input: lines.join('\n') + '\n', env: { ...process.env, MAXAGENT_PIPED: '1' } });
+  // --no-extras: the extras question must not install the bridge or the vectors (they live outside the temp home / take minutes).
+  const answer = (args, lines) => spawnSync(process.execPath, [BIN, ...args, '--home', home, '--no-extras'], { encoding: 'utf8', input: lines.join('\n') + '\n', env: { ...process.env, MAXAGENT_PIPED: '1' } });
   const cfgOf = () => JSON.parse(read(path.join(home, '.maxagent', 'config.json')));
   const block = (re) => (read(path.join(ws, 'AGENTS.md')).match(re) || [''])[0];
   const RULES = /<!-- maxagent:rules:start[\s\S]*?maxagent:rules:end -->/;
@@ -163,7 +164,7 @@ for (const lang of ['ru', 'en']) {
   let r = answer(['init'], ['ru', ws, '', '', 'y', '2', 'n', '']);
   let c = cfgOf();
   check(r.status === 0 && c.bridge === true && c.desktop === 2 && c.answerFormat === false && c.trash === true && c.codeword === undefined && !/одов/.test(r.stdout), 'init: answers piped in → settings saved', JSON.stringify(c) + r.stdout.slice(-300));
-  check(/рабочем столе 2/.test(block(RULES)) && /maxagent-bridge/.test(block(RULES)) && !/глянуть/.test(block(RULES)) && /Корзину/.test(block(RULES)), 'init: core rules follow the answers');
+  check(/рабочем столе 2/.test(block(RULES)) && /maxagent-bridge/.test(block(RULES)) && !/глянуть/.test(block(RULES)) && !/Отвечаю хозяину/.test(block(RULES)) && /Корзину/.test(block(RULES)), 'init: core rules follow the answers');
   check(/рабочий стол 2/.test(block(SETTINGS)) && /Браузерный мост: включено/.test(block(SETTINGS)), 'init: "Settings" section filled', block(SETTINGS));
   check(/npx maxagent-bridge install/.test(r.stdout), 'init: bridge chosen but not installed → install hint');
   const order = ['Адрес закрытого репозитория', 'Браузерный мост', 'Отдельный рабочий стол', 'Ответы агента', 'Удалять только в Корзину'].map((q) => r.stdout.indexOf(q));
@@ -173,7 +174,7 @@ for (const lang of ['ru', 'en']) {
   r = answer(['setup'], ['-', 'n', '0', 'y', 'n']);
   c = cfgOf();
   check(r.status === 0 && c.bridge === false && c.desktop === null && c.answerFormat === true && c.trash === false, 'setup: settings changed', JSON.stringify(c));
-  check(!/maxagent-bridge/.test(block(RULES)) && /глянуть/.test(block(RULES)) && !/Корзину/.test(block(RULES)) && /без окон/.test(block(RULES)), 'setup: core rules rebuilt');
+  check(!/maxagent-bridge/.test(block(RULES)) && !/глянуть/.test(block(RULES)) && !/Отвечаю хозяину/.test(block(RULES)) && !/Корзину/.test(block(RULES)) && /без окон/.test(block(RULES)), 'setup: core rules rebuilt (no language/format item even with answerFormat on)');
   check(/Браузерный мост: выключен/.test(block(SETTINGS)) && /Корзину: выключено/.test(block(SETTINGS)), 'setup: "Settings" section rebuilt', block(SETTINGS));
   const before = read(path.join(ws, 'AGENTS.md'));
   r = spawnSync(process.execPath, [BIN, 'setup', '--yes', '--home', home], { encoding: 'utf8' });
@@ -213,6 +214,167 @@ for (const lang of ['ru', 'en']) {
   const att = (repo) => ({ attestations: [{ predicateType: 'https://slsa.dev/provenance/v1', bundle: { dsseEnvelope: { payload: Buffer.from(JSON.stringify({ predicate: { buildDefinition: { externalParameters: { workflow: { repository: repo } } } } })).toString('base64') } } }] });
   check(U.provenanceRepo(att('https://github.com/vzroslieigry/maxagent')) === 'https://github.com/vzroslieigry/maxagent', 'provenance: our repository read from the attestation');
   check(U.provenanceRepo(att('https://github.com/someone/fork')) !== 'https://github.com/vzroslieigry/maxagent' && U.provenanceRepo({ attestations: [] }) === null, 'provenance: a fork or no attestation is not ours');
+}
+
+/* ---------- migration of AGENTS.md installed by 0.5.12 (the "read the package rules at the start" line), added template files ---------- */
+{
+  // The 0.5.12 template of AGENTS.md (commit bd95cbc) with {{CORE}}, the rules and the settings still to fill in.
+  // The installer expands {{CORE}} to path.join(home, '.maxagent', 'core', lang), so the path has mixed slashes: ...\core\ru/AGENTS.core.md
+  const OLD_TPL = {
+  ru: [
+    "# Правила рабочей папки",
+    "",
+    "Этот файл принадлежит вам: пакет его не перезаписывает — кроме блока «Главные правила» между метками, который собирается из ваших настроек. Агент читает файл в начале каждой задачи вместе с регламентом пакета; главные правила и раздел «Мои правила» хук показывает ему в начале сессии и после сжатия памяти.",
+    "",
+    "## Главные правила — всегда перед глазами",
+    "",
+    "<!-- maxagent:rules:start -->",
+    "<!-- maxagent:rules:end -->",
+    "",
+    "## Регламент пакета",
+    "",
+    "Перед любой задачей прочитай `{{CORE}}/AGENTS.core.md` и выполни раздел «Старт любой задачи».",
+    "",
+    "## Настройки (поменять — `npx maxagent setup`)",
+    "",
+    "<!-- maxagent:settings:start -->",
+    "{{SETTINGS}}",
+    "<!-- maxagent:settings:end -->",
+    "",
+    "## Мои правила",
+    "",
+    "<!-- Здесь — ваши личные правила для агентов, в том числе свои пункты «всегда»: хук показывает этот раздел вместе с главными правилами. Если они противоречат регламенту пакета, действуют ваши.",
+    "Пример:",
+    "- Отвечай коротко.",
+    "- Перед покупкой всегда показывай сумму и жди подтверждения.",
+    "-->",
+  ].join('\n') + '\n',
+  en: [
+    "# Workspace rules",
+    "",
+    "This file is yours: the package never overwrites it — except the \"Core rules\" block between the markers, which is built from your settings. The agent reads this file at the start of every task together with the package rules; the hook shows it the core rules and the \"My rules\" section at session start and after the context is compacted.",
+    "",
+    "## Core rules — always in view",
+    "",
+    "<!-- maxagent:rules:start -->",
+    "<!-- maxagent:rules:end -->",
+    "",
+    "## Package rules",
+    "",
+    "Before any task, read `{{CORE}}/AGENTS.core.md` and follow the \"Start of every task\" section.",
+    "",
+    "## Settings (change with `npx maxagent setup`)",
+    "",
+    "<!-- maxagent:settings:start -->",
+    "{{SETTINGS}}",
+    "<!-- maxagent:settings:end -->",
+    "",
+    "## My rules",
+    "",
+    "<!-- Your personal rules for agents go here, including your own \"always\" items: the hook shows this section together with the core rules. If they conflict with the package rules, yours win.",
+    "Example:",
+    "- Keep answers short.",
+    "- Before any purchase, always show the total and wait for confirmation.",
+    "-->",
+  ].join('\n') + '\n',
+  };
+  const T = {
+    ru: { head: '## Справка о пакете', intro: 'Здесь — только критически важное для любого агента', oldIntro: 'вместе с регламентом пакета', oldStart: 'Старт любой задачи', mine: '## Мои правила', always: ['Перед любой задачей прочитай', 'Перед любой задачей всегда прочитай'], manual: /уберите её сами/ },
+    en: { head: '## Package reference', intro: 'Only what is critical for any agent lives here', oldIntro: 'together with the package rules', oldStart: 'Start of every task', mine: '## My rules', always: ['Before any task, read', 'Before any task, always read'], manual: /remove it yourself/ },
+  };
+  const ownRules = '- My own always-rule, kept.\n- Second own line.\n';
+
+  /** A home as 0.5.12 left it: old AGENTS.md (own lines in "My rules"), no platform/trash.md (the owner deleted it), no agents/projects.md, config version 0.5.12. */
+  const oldInstall = (lang, eol) => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), `maxagent-migrate-${lang}-`));
+    fs.mkdirSync(path.join(home, '.claude'));
+    run('init', '--yes', '--lang', lang, '--home', home);
+    const ws = path.join(home, 'maxagent');
+    const file = path.join(ws, 'AGENTS.md');
+    const cur = read(file);
+    const rulesBlock = cur.match(/<!-- maxagent:rules:start[\s\S]*?maxagent:rules:end -->/)[0];
+    const settingsBlock = cur.match(/<!-- maxagent:settings:start -->[\s\S]*?maxagent:settings:end -->/)[0];
+    const old = (OLD_TPL[lang]
+      .replace('{{CORE}}', () => path.join(home, '.maxagent', 'core', lang))
+      .replace('<!-- maxagent:rules:start -->\n<!-- maxagent:rules:end -->', () => rulesBlock)
+      .replace('<!-- maxagent:settings:start -->\n{{SETTINGS}}\n<!-- maxagent:settings:end -->', () => settingsBlock)) + ownRules;
+    fs.writeFileSync(file, old.replace(/\r?\n/g, eol));
+    fs.rmSync(path.join(ws, 'experience', 'platform', 'trash.md'), { force: true }); // throwaway test file: the "owner deleted" atom
+    fs.rmSync(path.join(ws, 'experience', 'agents', 'projects.md'), { force: true }); // throwaway test file: 0.5.12 had none
+    const cfgFile = path.join(home, '.maxagent', 'config.json');
+    fs.writeFileSync(cfgFile, JSON.stringify({ ...JSON.parse(read(cfgFile)), version: '0.5.12' }, null, 2) + '\n');
+    return { home, ws, file };
+  };
+  const mineOf = (text, lang) => text.slice(text.indexOf(T[lang].mine));
+  const warnLines = (out) => out.split('\n').filter((l) => /WARN/.test(l));
+
+  for (const [lang, eol] of [['ru', '\n'], ['en', '\r\n']]) {
+    const tr = T[lang];
+    const label = `${lang} ${eol === '\r\n' ? 'CRLF' : 'LF'}`;
+    console.log(`\n== migration ${label}`);
+    const o = oldInstall(lang, eol);
+    const beforeBuf = fs.readFileSync(o.file);
+    const before = beforeBuf.toString('utf8');
+    const corePath = before.match(/`([^`\r\n]*AGENTS\.core\.md)`/)[1];
+    check(before.includes(tr.oldStart) && before.includes(tr.oldIntro) && /[\\/]core[\\/][a-z]+\/AGENTS\.core\.md$/.test(corePath), `${label}: test setup is the old 0.5.12 file (mixed slashes in the path)`, corePath);
+    let r = run('doctor', '--home', o.home);
+    check(warnLines(r.stdout).some((l) => /AGENTS\.md/.test(l) && /(регламент|rules)/.test(l)), `${label}: doctor on the old file warns about the start line (dCoreStart)`, r.stdout);
+
+    // a) update replaces the "read the rules at the start" line with the reference
+    r = run('update', '--home', o.home);
+    const after = read(o.file);
+    check(r.status === 0, `${label}: update exit 0`, r.stdout);
+    check(after.includes(tr.head) && after.includes(`\`${corePath}\``) && !after.includes(tr.oldStart) && !after.includes(tr.oldIntro) && after.includes(tr.intro), `${label}: update: reference instead of "start of every task", same core path, new intro`, after.slice(0, 900));
+    // b) the copy next to it is the old file, byte for byte
+    const backup = o.file + '.maxagent-backup';
+    check(fs.existsSync(backup) && fs.readFileSync(backup).equals(beforeBuf), `${label}: AGENTS.md.maxagent-backup equals the old file byte for byte`);
+    // c) "My rules" untouched, line endings kept
+    check(mineOf(after, lang) === mineOf(before, lang) && mineOf(after, lang).endsWith(ownRules.replace(/\n/g, eol)), `${label}: "My rules" byte for byte`);
+    check(eol === '\n' ? !/\r/.test(after) : !/(^|[^\r])\n/.test(after), `${label}: line endings kept (${eol === '\n' ? 'LF' : 'CRLF'})`);
+    // d) the atom the owner deleted stays deleted, the atom new in this version appears
+    check(!fs.existsSync(path.join(o.ws, 'experience', 'platform', 'trash.md')), `${label}: platform/trash.md did not come back`);
+    check(fs.existsSync(path.join(o.ws, 'experience', 'agents', 'projects.md')), `${label}: agents/projects.md appeared (new in 0.6.0)`);
+    // e) a second update changes nothing
+    const mtime = (f) => (fs.existsSync(f) ? fs.statSync(f).mtimeMs : -1);
+    const backupTime = mtime(backup);
+    r = run('update', '--home', o.home);
+    check(fs.readFileSync(o.file).equals(Buffer.from(after)) && mtime(backup) === backupTime && fs.readFileSync(backup).equals(beforeBuf), `${label}: second update: AGENTS.md and the copy unchanged`);
+    check(!fs.existsSync(path.join(o.ws, 'experience', 'platform', 'trash.md')), `${label}: second update: trash.md still absent`);
+    r = run('doctor', '--home', o.home);
+    check(r.status === 0 && !warnLines(r.stdout).some((l) => /AGENTS\.md/.test(l)), `${label}: doctor after the migration: no warning about the start line`, r.stdout);
+    fs.rmSync(o.home, { recursive: true, force: true }); // throwaway home created above
+  }
+
+  // f) the line changed by the owner is not recognised: nothing is touched, update says what to do, doctor warns
+  for (const [lang, eol] of [['ru', '\n'], ['en', '\r\n']]) {
+    const tr = T[lang];
+    const label = `${lang} ${eol === '\r\n' ? 'CRLF' : 'LF'}`;
+    console.log(`\n== migration, line changed by the owner ${label}`);
+    const o = oldInstall(lang, eol);
+    const edited = read(o.file).replace(tr.always[0], tr.always[1]);
+    check(edited !== read(o.file), `${label}: test setup: the owner's word "always" added`);
+    fs.writeFileSync(o.file, edited);
+    const editedBuf = fs.readFileSync(o.file);
+    let r = run('update', '--home', o.home);
+    check(fs.readFileSync(o.file).equals(editedBuf) && !fs.existsSync(o.file + '.maxagent-backup'), `${label}: changed line: AGENTS.md untouched, no copy made`);
+    check(tr.manual.test(r.stdout), `${label}: changed line: update prints agentsMigrateManual`, r.stdout);
+    r = run('doctor', '--home', o.home);
+    check(warnLines(r.stdout).some((l) => tr.manual.test(l)), `${label}: changed line: doctor warns (dCoreStart)`, r.stdout);
+    fs.rmSync(o.home, { recursive: true, force: true }); // throwaway home created above
+  }
+
+  // g) a fresh init with the new code: the new text, all template files, no migration copy
+  for (const lang of ['ru', 'en']) {
+    const tr = T[lang];
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), `maxagent-fresh-${lang}-`));
+    fs.mkdirSync(path.join(home, '.claude'));
+    run('init', '--yes', '--lang', lang, '--home', home);
+    const text = read(path.join(home, 'maxagent', 'AGENTS.md'));
+    check(text.includes(tr.head) && text.includes(tr.intro) && !text.includes(tr.oldStart) && !text.includes(tr.oldIntro), `${lang}: fresh init: new AGENTS.md text`);
+    check(fs.existsSync(path.join(home, 'maxagent', 'experience', 'agents', 'projects.md')) && fs.existsSync(path.join(home, 'maxagent', 'experience', 'platform', 'trash.md')), `${lang}: fresh init: agents/projects.md and the other template files`);
+    check(!fs.existsSync(path.join(home, 'maxagent', 'AGENTS.md.maxagent-backup')), `${lang}: fresh init: no migration copy`);
+    fs.rmSync(home, { recursive: true, force: true }); // throwaway home created above
+  }
 }
 
 console.log(failed ? `\n${failed} FAILED` : '\nALL OK');

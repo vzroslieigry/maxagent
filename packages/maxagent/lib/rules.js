@@ -1,6 +1,8 @@
 'use strict';
 // Core rules: the few rules an agent must keep in view all the time (shown at session start and after the
 // context is compacted). Half are the same for everyone, half come from the owner's settings.
+// The language and the answer format are not here (language is in "Settings", the format is a hook reminder);
+// the langName parameter of items/block/withRules is still passed by callers but means nothing now.
 // They live in the workspace AGENTS.md between markers: the package refreshes that block, the owner's own
 // "always" rules go to the "My rules" section of the same file (the hook shows both).
 
@@ -13,7 +15,7 @@ const TXT = {
     title: '## Главные правила — всегда перед глазами',
     note: 'собирается из настроек: npx maxagent init / update; свои пункты — в «Мои правила»',
     common: [
-      'Перед задачей — брифинг: нужен поиск? нужно что-то от хозяина? больше трёх шагов? относится к проекту? Хоть одно «да» → сначала опыт (`experience.md`, при проекте — `projects.md` и карточка) и делаю по нему, а не заново.',
+      'Опыт всплывает сам — атомами под задачу. Всплыл — делаю по нему, а не заново.',
       'Сам, а не «хозяин, нажмите»: если в опыте есть способ — делаю сам. Прошу хозяина только о том, что без него никак (его вход, решение, физическое действие).',
       '**Не говорю «готово», пока не проверил результат сам:** файл открыл, команду запустил, кадр посмотрел. Не проверил — так и пишу: «не проверено». Программные проверки отделяю от «посмотрел своими глазами».',
       'Не сработало — без оправданий: следующий способ и проверка.',
@@ -21,8 +23,6 @@ const TXT = {
       'Пароли, ключи, токены — никогда в файлы, опыт, логи, репозиторий.',
       'Имена новых файлов и папок — латиницей.',
     ],
-    lang: (l) => `Отвечаю хозяину и пишу записи на языке: ${l}.`,
-    format: 'Что хозяину **глянуть** (картинка, текст, файл) — кликабельной ссылкой; что **взять и передать** (путь, команда, готовый текст) — отдельным блоком кода под копирование.',
     trash: 'Удаляю только в Корзину, никогда навсегда.',
     repo: (r) => `Сохраняю и на компьютере, и в репозитории (${r}). Перед правкой и перед отправкой — \`git pull --rebase\`; в коммит только свои файлы (\`git add <путь>\`, не \`-A\`); чужое не трогаю. Не вышло — строка в \`sync.md\`.`,
     gitLocal: 'Git: в коммит только свои файлы (`git add <путь>`, не `-A`); чужое не трогаю.',
@@ -34,7 +34,7 @@ const TXT = {
     title: '## Core rules — always in view',
     note: 'built from settings: npx maxagent init / update; your own items go to "My rules"',
     common: [
-      'Before a task — a briefing: needs a search? needs something from the owner? more than three steps? belongs to a project? Any "yes" → experience first (`experience.md`, for a project also `projects.md` and its card), and I follow it instead of starting from scratch.',
+      'Experience surfaces by itself — atoms matched to the task. When it does, I follow it instead of starting from scratch.',
       'I do it myself instead of "owner, please click": if experience has a way, I do it. I ask the owner only for what is impossible without them (their sign-in, decision, physical action).',
       '**I never say "done" until I have checked the result myself:** opened the file, ran the command, looked at the frame. Not checked — I say "not verified". Automated checks are reported apart from "seen with my own eyes".',
       'Something failed — no excuses: the next way and a check.',
@@ -42,8 +42,6 @@ const TXT = {
       'Passwords, keys, tokens — never in files, experience, logs, the repository.',
       'New file and folder names — Latin letters only.',
     ],
-    lang: (l) => `I answer the owner and write records in: ${l}.`,
-    format: 'What the owner should **look at** (image, text, file) — a clickable link; what they should **take and pass on** (path, command, ready text) — a separate code block, ready to copy.',
     trash: 'I delete only to the Recycle Bin / Trash, never permanently.',
     repo: (r) => `I save both on the computer and in the repository (${r}). Before editing and before pushing — \`git pull --rebase\`; only my own files go into a commit (\`git add <path>\`, not \`-A\`); I don't touch others' work. If it fails — a line in \`sync.md\`.`,
     gitLocal: 'Git: only my own files go into a commit (`git add <path>`, not `-A`); I don\'t touch others\' work.',
@@ -56,8 +54,7 @@ const TXT = {
 /** The numbered list for these settings. */
 function items(cfg, langName) {
   const L = TXT[cfg.lang] || TXT.en;
-  const out = [L.lang(langName || cfg.lang)];
-  if (cfg.answerFormat !== false) out.push(L.format);
+  const out = [];
   if (cfg.bridge) out.push(L.bridge);
   out.push(cfg.desktop ? L.desktop(cfg.desktop) : L.noWindows);
   out.push(...L.common);

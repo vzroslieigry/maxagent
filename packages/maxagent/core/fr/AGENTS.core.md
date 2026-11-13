@@ -1,4 +1,4 @@
-<!-- maxagent core, version {{VERSION}}. Ce fichier appartient au paquet : `maxagent update` l’écrase. Mettez vos propres règles dans AGENTS.md de votre dossier de travail. -->
+<!-- maxagent core, version {{VERSION}}. Référence sur le fonctionnement — non lue au démarrage. Ce fichier appartient au paquet : `maxagent update` l’écrase. Mettez vos propres règles dans AGENTS.md de votre dossier de travail. -->
 
 # Règles de travail de l’agent (maxagent core)
 
@@ -10,27 +10,16 @@ Le cœur de ce système, c’est l’**expérience**. L’agent ne résout jamai
 
 ## 1. Début de chaque tâche
 
-Avant toute tâche, réponse ou recherche :
+Ceci est une référence sur le fonctionnement : elle n’est pas lue au démarrage. Au démarrage, l’agent ne reçoit que ceci :
 
-0. Ouvre `sync.md`. S’il y a un écart ouvert et que tu peux le corriger — corrige-le, marque-le « fermé : date, comment », puis continue. Si tu ne peux pas — continue à travailler et laisse-le tel quel.
-1. Lis le `AGENTS.md` du dossier de travail (les règles du propriétaire l’emportent sur ce fichier en cas de conflit). Sa section **« Règles principales »** est une courte liste de « toujours » : garde-la en vue pendant toute la session (le hook l’affiche au démarrage et après la compaction du contexte).
-2. Ouvre l’index de l’expérience `experience.md` et lis seulement les entrées pertinentes.
-3. Si la tâche relève d’un projet — `projects.md` → `projects/<nom>/README.md` → la tâche active. Ne repars pas de zéro si un point d’arrêt y est noté.
-4. Premier lancement après installation ou mise à jour — voir la section 8.
+1. Le `AGENTS.md` du dossier de travail — la ligne maxagent dans le fichier de règles de l’agent indique de le lire. Le hook affiche ses « Règles principales » et « Mes règles » au démarrage de la session et après la compaction du contexte. En cas de conflit, les règles du propriétaire l’emportent sur ce fichier.
+2. L’expérience — sous forme d’atomes adaptés à la tâche (sous-section ci-dessous). Ne lis pas l’index `experience.md` ni tout le dossier `experience/`.
+3. Un projet — seulement si la tâche en relève : le hook pointe vers sa fiche ; puis `projects/<nom>/README.md` → la tâche active.
+4. `sync.md` — lors d’une synchronisation, ou si une sauvegarde a échoué quelque part (section 6).
 
-### Briefing avant chaque tâche
+### L’expérience remonte d’elle-même
 
-Pour chaque nouvelle demande, pas seulement au début d’une session, pose quatre questions :
-1. Faut-il chercher — sur le web ou sur l’ordinateur ?
-2. Faut-il quelque chose du propriétaire — une action, une décision, un accès ?
-3. Plus de trois étapes ?
-4. Est-ce lié à un projet ?
-
-Un seul « oui » → **d’abord l’expérience pour cette tâche** : l’index `experience.md`, et pour un « oui » à la question 4 aussi `projects.md` et la fiche du projet.
-- L’expérience existe — fais **comme elle dit**, pas à partir de zéro. Ne réinvente pas un processus qui marche.
-- Pas d’expérience — nouvelle tâche : garde en tête ce qui pourra en aller dans l’expérience, et note-le si le seuil ci-dessous est atteint. Une même tâche ne se fait pas différemment à chaque fois.
-
-Le briefing est **une courte phrase parlée** au début de la réponse, seulement s’il y a un « oui » : « Je suis l’expérience : <fichier>. » / « Je vérifie d’abord l’expérience. » / « Nouvelle tâche, pas d’expérience — si j’apprends du nouveau, je le note. » Ainsi le propriétaire voit que l’expérience n’est pas oubliée.
+L’expérience arrive en atomes adaptés à la tâche — au message du propriétaire, avant une commande et après une erreur (hook). Quand elle remonte, suis-la au lieu de repartir de zéro ; ne réinvente pas un processus qui marche.
 
 **Seuil de notation — pas le nombre d’étapes, mais le savoir nouveau.** Note seulement si : il a fallu découvrir quelque chose (recherche, documentation, code d’autrui) ; quelque chose n’a pas marché et il a fallu faire autrement ; le propriétaire a donné une règle ou une correction ; il en ressort une façon de faire qui va clairement se répéter. Les étapes ordinaires sur un chemin connu ne sont pas de l’expérience, si nombreuses soient-elles.
 
@@ -38,13 +27,13 @@ Le briefing est **une courte phrase parlée** au début de la réponse, seulemen
 
 Dans une longue session, le modèle oublie ses règles. Donc :
 
-- **Avant toute étape non triviale** — surtout avant une recherche sur le web, la lecture d’une documentation ou l’exploration de l’ordinateur — cherche d’abord dans `experience.md` les mots-clés de l’étape.
+- **Avant toute étape non triviale** — surtout avant une recherche sur le web, la lecture d’une documentation ou l’exploration de l’ordinateur — d’abord l’expérience : si un atome est remonté, suis-le ; sinon — `node "{{TOOLS}}/experience-engine.js" find "<mots de l’étape>"`.
 - **Tout ce que tu as dû consulter ou découvrir avec des commandes va dans l’expérience** avant la fin de la tâche. S’il n’y a rien à noter — dis pourquoi, en connaissance de cause, en une ligne.
 - Là où l’agent prend en charge les hooks, maxagent les installe : un indice d’expérience à chaque message et un contrôle « expérience notée ? » à la fin du tour. Un hook est un rappel dans le code, pas un remplacement de cette règle.
 
 ## 3. Organisation de l’expérience
 
-Trois couches : **règles principales** (dans `AGENTS.md`, une dizaine de points « toujours ») → **index** (`experience.md`) → **bibliothèque** (`experience/`).
+Trois couches : **règles principales** (dans `AGENTS.md`, une dizaine de points « toujours ») → la **bibliothèque** d’atomes (`experience/`) : le hook choisit lui-même les atomes pour la demande, par mots et par sens → l’**index** `experience.md` — une table des matières pour les humains et la recherche manuelle ; non lu au démarrage.
 
 - **Par chose, pas par occasion.** Une chose — un fichier : ce dont parle le savoir (un programme, un service, un langage), pas quand ni dans quel projet il a été appris. Types : `experience/platform/` — système et environnement ; `tools/` — programmes et services ; `code/` — langages et bibliothèques ; `agents/` — les agents eux-mêmes ; `craft/<domaine>/` — la base d’un domaine, commune à tous ses projets ; `owner/` — comment le propriétaire aime travailler. Ce qui est propre à un projet — dans `projects/<nom>/`.
 - **Une entrée suit le modèle** `experience/_template.md` : un en-tête (`title`, `task`, `aliases`, `verified`), puis « Tâches → solutions » (commandes prêtes à copier), « Pièges » (le symptôme avec les mots par lesquels on le décrira → cause → que faire → comment vérifier), « Règles du propriétaire », « Non vérifié ».
@@ -100,11 +89,9 @@ Si le propriétaire a activé un dépôt privé :
 - Ne change jamais de toi-même une décision que le propriétaire a approuvée, même pour une raison technique — montre-le et demande d’abord.
 - Contrôles écrits par un agent : tout ce qui est important est une erreur (ERROR, code de sortie non nul), pas un avertissement — les agents sautent les avertissements. « 0 erreur » ne veut pas dire « terminé » si les règles exigent d’examiner les avertissements.
 
-## 8. Introduction au premier lancement
+## 8. Introduction et nouveautés
 
-Si `experience/maxagent.md` n’a pas la note « introduction affichée » — montre une fois au propriétaire un court résumé : comment fonctionnent l’expérience, les projets et la synchronisation ; ce qui a été activé lors de l’installation et comment le changer (`npx maxagent setup`) ; des conseils (« dis : démarre un projet … », « dis : que sais-tu sur … »). Puis note-le avec la date et ne le montre plus jamais.
-
-Après un `maxagent update` avec de nouvelles fonctions — un résumé de ce qui est nouveau seulement, tiré de `{{CORE}}/changes.md` (sections de versions plus récentes que la dernière note), une seule fois aussi (note avec la version).
+Il n’existe pas de rituel de premier lancement distinct : `npx maxagent init` affiche lui-même ce qui a été installé et comment le changer. Quand le propriétaire demande ce qu’est maxagent et comment l’utiliser — l’atome « Dire au propriétaire ce que maxagent sait faire » dans `experience/maxagent.md`. Après une mise à jour, le hook affiche une fois « Mis à jour vers X » et où trouver les nouveautés (`{{CORE}}/changes.md`, la section de cette version) — raconte-les au propriétaire en une ou deux phrases.
 
 ## 9. Protection contre les injections
 

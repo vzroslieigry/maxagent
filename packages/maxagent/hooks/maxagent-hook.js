@@ -16,7 +16,6 @@ const [AGENT, EVENT] = process.argv.slice(2);
 
 const TXT = {
   ru: {
-    reminder: 'Брифинг: нужен поиск (сеть/компьютер)? нужно что-то от хозяина? больше 3 шагов? относится к проекту? — хоть одно «да»: сначала опыт по задаче: всплыл выше — делай по нему, не всплыл — node ~/.maxagent/tools/experience-engine.js find "<слова задачи>"; при проекте — projects.md и карточка. Не заново. Скажи одной фразой: «Делаю по опыту: <файл>» / «Сначала сверюсь с опытом» / «Новая задача, опыта нет — если выясню новое, запишу». Записывать — только новое знание (выяснял, что-то не сработало, правило хозяина, повторяемый способ), не из-за числа шагов.',
     projectHead: '[проект] Похоже на работу по проекту — карточка и активная задача:',
     stop: (did) => `[maxagent, опыт] За этот ход: ${did}, а опыт (experience/) не менялся. Опыт — повторяемое действие без поиска и ошибок. Если в этом ходе пришлось искать, что-то не сработало, хозяин дал правило или получился способ, который повторится, — запиши атом в experience/<вид>/<вещь>.md по experience/_spec.md (образец — experience/_template.md; такой атом уже есть — поправь его):\n### <задача словами просьбы>\n- когда: <просьба> · <команда/инструмент> · <текст ошибки>\n- вещь: <предмет> · <предмет>\n1. <шаг, команда>\n- проверка: <что должно получиться>\n- ловушка: не <так> — <почему>\n- источник: свой опыт, <дата>\nПроверь: node ~/.maxagent/tools/experience-engine.js lint <файл> → «ошибок нет»; find "<слова просьбы>" → атом наверху. Затем коммит. Записывать нечего — одной строкой скажи почему и заканчивай. Второй раз этот хук не остановит.`,
     lintBad: (file, list) => `[maxagent, опыт] ${file} не по формату атома (experience/_spec.md) — исправь сейчас, иначе он плохо найдётся и коммит не пройдёт:\n${list}`,
@@ -26,7 +25,7 @@ const TXT = {
     formatAsk: (list) => `[maxagent, ответ] Простым текстом остались: ${list.map((x) => `«${x}»`).join(', ')}. Ответ уже у хозяина — не повторяй его. Допиши только недостающее: что глянуть — список кликабельных ссылок [имя](путь) с пояснением в несколько слов; что скопировать — отдельным блоком кода.`,
     answerAtoms: (atoms) => `[опыт ответа] Так у нас отдают это хозяину:\n${atoms}\nОтвет уже у хозяина — не повторяй его. Чего-то не хватает — допиши только это, коротко; всё на месте — просто заверши ход.`,
     updateAvail: (cur, v) => `[maxagent] Вышла версия ${v} (у вас ${cur || '?'}). Предложи хозяину обновить и после его «да» выполни: npx --yes maxagent@latest update — что нового, покажет сама команда.`,
-    autoUpdated: (v) => `[maxagent] Обновлено до ${v} (исправления ставятся сами, настройка autoUpdate).`,
+    autoUpdated: (v, file) => `[maxagent] Обновлено до ${v} (исправления ставятся сами, настройка autoUpdate). Что нового — ${file}, раздел ${v}: перескажи хозяину одной-двумя фразами.`,
     news: (text) => `[maxagent, новость] ${text}`,
     adoptAsk: (head, id) => `[опыт] В этом ходе показывался чужой атом «${head}» (общий набор). Если он пригодился и сработал — сохрани его своим: node ~/.maxagent/tools/experience-packs.js adopt "${id}", при нужде поправь пути и проверь lint. Не пригодился — ничего не делай и заканчивай. Второй раз этот хук не остановит.`,
     did: { research: 'поиск/чтение в сети', shell: 'команды', edits: 'правки кода после проверки' },
@@ -43,10 +42,9 @@ const TXT = {
     startHead: '[maxagent] Главные правила — держи перед глазами всю сессию:',
     compactHead: '[maxagent] Память сжата — правила, прочитанные в начале, могли выпасть. Главное — ниже, держи перед глазами:',
     ownHead: 'Правила хозяина («Мои правила» в AGENTS.md):',
-    startTail: (ws) => `Полный регламент и правила рабочей папки: ${ws}`,
+    startTail: (ws) => `Правила рабочей папки целиком: ${ws}`,
   },
   en: {
-    reminder: 'Briefing: needs a search (web/computer)? needs something from the owner? more than 3 steps? belongs to a project? — any "yes": experience for this task first: shown above — do it that way; not shown — node ~/.maxagent/tools/experience-engine.js find "<task words>"; for a project also projects.md and its card. Not from scratch. Say it in one phrase: "Following experience: <file>" / "Checking experience first" / "New task, no experience yet — will record anything new". Record only new knowledge (had to find out, something failed, owner\'s rule, a repeatable way), not because of the number of steps.',
     projectHead: '[project] Looks like project work — card and active task:',
     stop: (did) => `[maxagent, experience] This turn: ${did}, but experience (experience/) did not change. Experience is a repeatable action without search and mistakes. If this turn needed a search, something failed, the owner gave a rule or you found a way that will repeat — write an atom to experience/<kind>/<thing>.md per experience/_spec.md (sample — experience/_template.md; if such an atom exists, fix it):\n### <task in the words of the request>\n- когда: <request> · <command/tool> · <error text>\n- вещь: <thing> · <thing>\n1. <step, command>\n- проверка: <expected result>\n- ловушка: not <this> — <why>\n- источник: own experience, <date>\nCheck: node ~/.maxagent/tools/experience-engine.js lint <file> → no errors; find "<request words>" → the atom on top. Then commit. Nothing to record — say why in one line and finish. This hook won't stop you a second time.`,
     lintBad: (file, list) => `[maxagent, experience] ${file} does not follow the atom format (experience/_spec.md) — fix it now, or it will be found badly and the commit will fail:\n${list}`,
@@ -57,7 +55,7 @@ const TXT = {
     formatAsk: (list) => `[maxagent, answer] Left as plain text: ${list.map((x) => `"${x}"`).join(', ')}. The owner already has the answer — do not repeat it. Add only what is missing: what to look at — a list of clickable links [name](path), a few words each; what to copy — a separate code block.`,
     answerAtoms: (atoms) => `[answer experience] This is how we hand this to the owner:\n${atoms}\nThe owner already has the answer — do not repeat it. Something missing — add only that, briefly; all in place — just finish.`,
     updateAvail: (cur, v) => `[maxagent] Version ${v} is out (you have ${cur || '?'}). Offer the owner to update and after their "yes" run: npx --yes maxagent@latest update — the command shows what's new.`,
-    autoUpdated: (v) => `[maxagent] Updated to ${v} (fixes install themselves, setting autoUpdate).`,
+    autoUpdated: (v, file) => `[maxagent] Updated to ${v} (fixes install themselves, setting autoUpdate). What's new — ${file}, section ${v}: retell it to the owner in a sentence or two.`,
     news: (text) => `[maxagent, news] ${text}`,
     adoptAsk: (head, id) => `[experience] A shared (someone else's) atom "${head}" was shown this turn. If it helped and worked — keep it as your own: node ~/.maxagent/tools/experience-packs.js adopt "${id}", fix paths if needed and check lint. If not — do nothing and finish. This hook won't stop you a second time.`,
     did: { research: 'web search/reading', shell: 'commands', edits: 'code fixes after a check' },
@@ -74,10 +72,9 @@ const TXT = {
     startHead: '[maxagent] Core rules — keep them in view for the whole session:',
     compactHead: '[maxagent] The context was compacted — rules read at the start may be gone. The essentials, keep them in view:',
     ownHead: 'Owner\'s rules ("My rules" in AGENTS.md):',
-    startTail: (ws) => `Full rules and workspace rules: ${ws}`,
+    startTail: (ws) => `Workspace rules in full: ${ws}`,
   },
   es: {
-    reminder: 'Briefing: ¿hace falta buscar (web/ordenador)? ¿hace falta algo del dueño? ¿más de 3 pasos? ¿es de un proyecto? — con un solo «sí»: primero la experiencia de esta tarea: si apareció arriba, hazlo así; si no, node ~/.maxagent/tools/experience-engine.js find "<palabras de la tarea>"; si es de un proyecto, también projects.md y su ficha. No desde cero. Dilo en una frase: «Sigo la experiencia: <archivo>» / «Primero reviso la experiencia» / «Tarea nueva, sin experiencia — si descubro algo nuevo, lo anoto». Anota solo conocimiento nuevo (tuviste que averiguarlo, algo falló, una regla del dueño, una forma repetible), no por el número de pasos.',
     projectHead: '[proyecto] Parece trabajo de un proyecto — ficha y tarea activa:',
     stop: (did) => `[maxagent, experiencia] En este turno: ${did}, pero la experiencia (experience/) no cambió. Experiencia es una acción repetible sin búsquedas ni errores. Si en este turno hubo que buscar, algo falló, el dueño dio una regla o salió una forma que se repetirá — escribe un átomo en experience/<tipo>/<cosa>.md según experience/_spec.md (muestra — experience/_template.md; si ese átomo ya existe, corrígelo):\n### <tarea con las palabras de la petición>\n- когда: <petición> · <comando/herramienta> · <texto del error>\n- вещь: <objeto> · <objeto>\n1. <paso, comando>\n- проверка: <qué debe salir>\n- ловушка: no <así> — <por qué>\n- источник: experiencia propia, <fecha>\nComprueba: node ~/.maxagent/tools/experience-engine.js lint <archivo> → sin errores; find "<palabras de la petición>" → el átomo arriba. Luego commit. Si no hay nada que anotar, di por qué en una línea y termina. Este hook no te detendrá una segunda vez.`,
     lintBad: (file, list) => `[maxagent, experiencia] ${file} no sigue el formato de átomo (experience/_spec.md) — corrígelo ahora, o se encontrará mal y el commit no pasará:\n${list}`,
@@ -85,7 +82,7 @@ const TXT = {
     recallHeads: { sure: '[experiencia — parece que ya hice esto; comprueba si encaja]', maybe: '[experiencia — quizá algo parecido; comprueba si encaja]', also: 'También parecido:', only: '[experiencia — casos parecidos]',
       shared: (p, v) => `[experiencia ajena — no verificada aquí; paquete «${p}»${v ? `, v${v}` : ''}]`, adopt: (id) => `Si sirve, guárdala como tuya: node ~/.maxagent/tools/experience-packs.js adopt "${id}"` },
     updateAvail: (cur, v) => `[maxagent] Salió la versión ${v} (tienes ${cur || '?'}). Ofrece al dueño actualizar y, tras su «sí», ejecuta: npx --yes maxagent@latest update — el propio comando muestra las novedades.`,
-    autoUpdated: (v) => `[maxagent] Actualizado a ${v} (las correcciones se instalan solas, ajuste autoUpdate).`,
+    autoUpdated: (v, file) => `[maxagent] Actualizado a ${v} (las correcciones se instalan solas, ajuste autoUpdate). Novedades — ${file}, sección ${v}: cuéntaselo al dueño en una o dos frases.`,
     news: (text) => `[maxagent, noticia] ${text}`,
     adoptAsk: (head, id) => `[experiencia] En este turno se mostró un átomo ajeno «${head}» (paquete compartido). Si sirvió y funcionó, guárdalo como tuyo: node ~/.maxagent/tools/experience-packs.js adopt "${id}", corrige rutas si hace falta y comprueba lint. Si no sirvió, no hagas nada y termina. Este hook no te detendrá una segunda vez.`,
     did: { research: 'búsqueda/lectura en la web', shell: 'comandos', edits: 'correcciones de código tras una comprobación' },
@@ -102,10 +99,9 @@ const TXT = {
     startHead: '[maxagent] Reglas principales — tenlas presentes toda la sesión:',
     compactHead: '[maxagent] El contexto se compactó — las reglas leídas al inicio pueden haberse perdido. Lo esencial, tenlo presente:',
     ownHead: 'Reglas del dueño («Mis reglas» en AGENTS.md):',
-    startTail: (ws) => `Reglas completas y reglas de la carpeta de trabajo: ${ws}`,
+    startTail: (ws) => `Reglas de la carpeta de trabajo completas: ${ws}`,
   },
   pt: {
-    reminder: 'Briefing: precisa de busca (web/computador)? precisa de algo do dono? mais de 3 passos? é de um projeto? — qualquer «sim»: primeiro a experiência desta tarefa: apareceu acima — faça assim; não apareceu — node ~/.maxagent/tools/experience-engine.js find "<palavras da tarefa>"; se for projeto, também projects.md e o cartão dele. Não do zero. Diga numa frase: «Sigo a experiência: <arquivo>» / «Primeiro confiro a experiência» / «Tarefa nova, sem experiência — se descobrir algo novo, registro». Registre só conhecimento novo (teve que descobrir, algo falhou, regra do dono, um jeito repetível), não pelo número de passos.',
     projectHead: '[projeto] Parece trabalho de projeto — cartão e tarefa ativa:',
     stop: (did) => `[maxagent, experiência] Neste turno: ${did}, mas a experiência (experience/) não mudou. Experiência é uma ação repetível sem busca e sem erros. Se neste turno foi preciso buscar, algo falhou, o dono deu uma regra ou saiu um jeito que vai se repetir — escreva um átomo em experience/<tipo>/<coisa>.md conforme experience/_spec.md (modelo — experience/_template.md; se esse átomo já existe, corrija-o):\n### <tarefa nas palavras do pedido>\n- когда: <pedido> · <comando/ferramenta> · <texto do erro>\n- вещь: <objeto> · <objeto>\n1. <passo, comando>\n- проверка: <o que deve sair>\n- ловушка: não <assim> — <por quê>\n- источник: experiência própria, <data>\nConfira: node ~/.maxagent/tools/experience-engine.js lint <arquivo> → sem erros; find "<palavras do pedido>" → o átomo no topo. Depois commit. Nada a registrar — diga por quê numa linha e termine. Este hook não vai te parar uma segunda vez.`,
     lintBad: (file, list) => `[maxagent, experiência] ${file} não segue o formato de átomo (experience/_spec.md) — corrija agora, senão ele será mal encontrado e o commit não vai passar:\n${list}`,
@@ -113,7 +109,7 @@ const TXT = {
     recallHeads: { sure: '[experiência — parece que já fiz isso; confira se serve]', maybe: '[experiência — talvez algo parecido; confira se serve]', also: 'Também parecido:', only: '[experiência — casos parecidos]',
       shared: (p, v) => `[experiência de outra pessoa — não verificada aqui; pacote «${p}»${v ? `, v${v}` : ''}]`, adopt: (id) => `Se ajudar, guarde como sua: node ~/.maxagent/tools/experience-packs.js adopt "${id}"` },
     updateAvail: (cur, v) => `[maxagent] Saiu a versão ${v} (você tem ${cur || '?'}). Ofereça ao dono atualizar e, depois do «sim» dele, execute: npx --yes maxagent@latest update — o próprio comando mostra as novidades.`,
-    autoUpdated: (v) => `[maxagent] Atualizado para ${v} (as correções se instalam sozinhas, configuração autoUpdate).`,
+    autoUpdated: (v, file) => `[maxagent] Atualizado para ${v} (as correções se instalam sozinhas, configuração autoUpdate). Novidades — ${file}, seção ${v}: conte ao dono em uma ou duas frases.`,
     news: (text) => `[maxagent, novidade] ${text}`,
     adoptAsk: (head, id) => `[experiência] Neste turno apareceu um átomo de outra pessoa «${head}» (pacote compartilhado). Se ajudou e funcionou, guarde como seu: node ~/.maxagent/tools/experience-packs.js adopt "${id}", corrija caminhos se preciso e confira o lint. Se não ajudou, não faça nada e termine. Este hook não vai te parar uma segunda vez.`,
     did: { research: 'busca/leitura na web', shell: 'comandos', edits: 'correções de código depois de uma verificação' },
@@ -130,10 +126,9 @@ const TXT = {
     startHead: '[maxagent] Regras principais — mantenha-as à vista durante toda a sessão:',
     compactHead: '[maxagent] O contexto foi compactado — as regras lidas no início podem ter sumido. O essencial, mantenha à vista:',
     ownHead: 'Regras do dono («Minhas regras» no AGENTS.md):',
-    startTail: (ws) => `Regras completas e regras da pasta de trabalho: ${ws}`,
+    startTail: (ws) => `Regras da pasta de trabalho completas: ${ws}`,
   },
   de: {
-    reminder: 'Briefing: Ist eine Suche nötig (Web/Rechner)? Braucht es etwas vom Besitzer? Mehr als 3 Schritte? Gehört es zu einem Projekt? — bei einem einzigen „ja“: zuerst die Erfahrung zu dieser Aufgabe: oben angezeigt — so machen; nicht angezeigt — node ~/.maxagent/tools/experience-engine.js find "<Wörter der Aufgabe>"; bei einem Projekt auch projects.md und seine Karte. Nicht von vorn. Sag es in einem Satz: „Ich folge der Erfahrung: <Datei>“ / „Ich prüfe zuerst die Erfahrung“ / „Neue Aufgabe, keine Erfahrung — finde ich Neues, halte ich es fest“. Festhalten nur neues Wissen (musste es herausfinden, etwas ging schief, Regel des Besitzers, ein wiederholbarer Weg), nicht wegen der Zahl der Schritte.',
     projectHead: '[Projekt] Sieht nach Projektarbeit aus — Karte und aktive Aufgabe:',
     stop: (did) => `[maxagent, Erfahrung] In diesem Zug: ${did}, aber die Erfahrung (experience/) hat sich nicht geändert. Erfahrung ist eine wiederholbare Handlung ohne Suche und ohne Fehler. Wenn in diesem Zug gesucht werden musste, etwas schiefging, der Besitzer eine Regel gab oder ein Weg entstand, der sich wiederholen wird — schreib ein Atom nach experience/<Art>/<Sache>.md gemäß experience/_spec.md (Muster — experience/_template.md; gibt es das Atom schon, korrigiere es):\n### <Aufgabe in den Worten der Bitte>\n- когда: <Bitte> · <Befehl/Werkzeug> · <Fehlertext>\n- вещь: <Gegenstand> · <Gegenstand>\n1. <Schritt, Befehl>\n- проверка: <was herauskommen soll>\n- ловушка: nicht <so> — <warum>\n- источник: eigene Erfahrung, <Datum>\nPrüfe: node ~/.maxagent/tools/experience-engine.js lint <Datei> → keine Fehler; find "<Wörter der Bitte>" → das Atom oben. Dann commit. Nichts festzuhalten — sag in einer Zeile, warum, und hör auf. Ein zweites Mal hält dich dieser Hook nicht an.`,
     lintBad: (file, list) => `[maxagent, Erfahrung] ${file} entspricht nicht dem Atom-Format (experience/_spec.md) — korrigiere es jetzt, sonst wird es schlecht gefunden und der Commit scheitert:\n${list}`,
@@ -141,7 +136,7 @@ const TXT = {
     recallHeads: { sure: '[Erfahrung — sieht aus, als hätte ich das schon gemacht; prüfe, ob es passt]', maybe: '[Erfahrung — vielleicht Ähnliches; prüfe, ob es passt]', also: 'Auch ähnlich:', only: '[Erfahrung — ähnliche Fälle]',
       shared: (p, v) => `[fremde Erfahrung — hier nicht geprüft; Paket „${p}“${v ? `, v${v}` : ''}]`, adopt: (id) => `Wenn es hilft — als eigene übernehmen: node ~/.maxagent/tools/experience-packs.js adopt "${id}"` },
     updateAvail: (cur, v) => `[maxagent] Version ${v} ist erschienen (Sie haben ${cur || '?'}). Biete dem Besitzer das Update an und führe nach seinem „ja“ aus: npx --yes maxagent@latest update — was neu ist, zeigt der Befehl selbst.`,
-    autoUpdated: (v) => `[maxagent] Auf ${v} aktualisiert (Korrekturen installieren sich selbst, Einstellung autoUpdate).`,
+    autoUpdated: (v, file) => `[maxagent] Auf ${v} aktualisiert (Korrekturen installieren sich selbst, Einstellung autoUpdate). Was neu ist — ${file}, Abschnitt ${v}: erzähl es dem Besitzer in ein, zwei Sätzen.`,
     news: (text) => `[maxagent, Neuigkeit] ${text}`,
     adoptAsk: (head, id) => `[Erfahrung] In diesem Zug wurde ein fremdes Atom „${head}“ (geteiltes Paket) angezeigt. Wenn es geholfen und funktioniert hat — übernimm es als eigenes: node ~/.maxagent/tools/experience-packs.js adopt "${id}", passe bei Bedarf Pfade an und prüfe lint. Wenn nicht — tu nichts und hör auf. Ein zweites Mal hält dich dieser Hook nicht an.`,
     did: { research: 'Websuche/Lesen im Web', shell: 'Befehle', edits: 'Code-Korrekturen nach einer Prüfung' },
@@ -158,10 +153,9 @@ const TXT = {
     startHead: '[maxagent] Hauptregeln — die ganze Sitzung über im Blick behalten:',
     compactHead: '[maxagent] Der Kontext wurde komprimiert — am Anfang gelesene Regeln können weg sein. Das Wichtigste, im Blick behalten:',
     ownHead: 'Regeln des Besitzers („Meine Regeln“ in AGENTS.md):',
-    startTail: (ws) => `Vollständige Regeln und Regeln des Arbeitsordners: ${ws}`,
+    startTail: (ws) => `Regeln des Arbeitsordners vollständig: ${ws}`,
   },
   fr: {
-    reminder: 'Briefing : faut-il chercher (web/ordinateur) ? faut-il quelque chose du propriétaire ? plus de 3 étapes ? lié à un projet ? — au moindre « oui » : d’abord l’expérience pour cette tâche : affichée plus haut — fais comme elle dit ; pas affichée — node ~/.maxagent/tools/experience-engine.js find "<mots de la tâche>" ; pour un projet, aussi projects.md et sa fiche. Pas de zéro. Dis-le en une phrase : « Je suis l’expérience : <fichier> » / « Je vérifie d’abord l’expérience » / « Nouvelle tâche, pas d’expérience — si j’apprends du nouveau, je le note ». Noter seulement un savoir nouveau (il a fallu chercher, quelque chose a échoué, règle du propriétaire, une façon répétable), pas à cause du nombre d’étapes.',
     projectHead: '[projet] Ça ressemble à un travail de projet — fiche et tâche active :',
     stop: (did) => `[maxagent, expérience] Pendant ce tour : ${did}, mais l’expérience (experience/) n’a pas changé. L’expérience, c’est une action répétable sans recherche ni erreurs. Si ce tour a demandé une recherche, si quelque chose a échoué, si le propriétaire a donné une règle ou si une façon de faire va se répéter — écris un atome dans experience/<type>/<chose>.md selon experience/_spec.md (modèle — experience/_template.md ; si cet atome existe déjà, corrige-le) :\n### <tâche avec les mots de la demande>\n- когда: <demande> · <commande/outil> · <texte de l’erreur>\n- вещь: <objet> · <objet>\n1. <étape, commande>\n- проверка: <ce qui doit sortir>\n- ловушка: pas <ainsi> — <pourquoi>\n- источник: expérience propre, <date>\nVérifie : node ~/.maxagent/tools/experience-engine.js lint <fichier> → pas d’erreurs ; find "<mots de la demande>" → l’atome en tête. Puis commit. Rien à noter — dis pourquoi en une ligne et termine. Ce hook ne t’arrêtera pas une seconde fois.`,
     lintBad: (file, list) => `[maxagent, expérience] ${file} ne suit pas le format d’atome (experience/_spec.md) — corrige-le maintenant, sinon il sera mal retrouvé et le commit ne passera pas :\n${list}`,
@@ -169,7 +163,7 @@ const TXT = {
     recallHeads: { sure: '[expérience — on dirait que j’ai déjà fait ça ; vérifie que ça convient]', maybe: '[expérience — peut-être quelque chose de proche ; vérifie que ça convient]', also: 'Aussi proche :', only: '[expérience — cas proches]',
       shared: (p, v) => `[expérience d’autrui — non vérifiée ici ; paquet « ${p} »${v ? `, v${v}` : ''}]`, adopt: (id) => `Si ça aide — garde-la comme la tienne : node ~/.maxagent/tools/experience-packs.js adopt "${id}"` },
     updateAvail: (cur, v) => `[maxagent] La version ${v} est sortie (vous avez ${cur || '?'}). Propose au propriétaire de mettre à jour et, après son « oui », lance : npx --yes maxagent@latest update — la commande affiche elle-même les nouveautés.`,
-    autoUpdated: (v) => `[maxagent] Mis à jour vers ${v} (les correctifs s’installent seuls, réglage autoUpdate).`,
+    autoUpdated: (v, file) => `[maxagent] Mis à jour vers ${v} (les correctifs s’installent seuls, réglage autoUpdate). Nouveautés — ${file}, section ${v} : résume-les au propriétaire en une ou deux phrases.`,
     news: (text) => `[maxagent, nouvelle] ${text}`,
     adoptAsk: (head, id) => `[expérience] Un atome d’autrui « ${head} » (paquet partagé) a été affiché pendant ce tour. S’il a servi et marché — garde-le comme le tien : node ~/.maxagent/tools/experience-packs.js adopt "${id}", corrige les chemins si besoin et vérifie lint. Sinon — ne fais rien et termine. Ce hook ne t’arrêtera pas une seconde fois.`,
     did: { research: 'recherche/lecture sur le web', shell: 'commandes', edits: 'corrections de code après une vérification' },
@@ -186,10 +180,9 @@ const TXT = {
     startHead: '[maxagent] Règles principales — garde-les en vue pendant toute la session :',
     compactHead: '[maxagent] Le contexte a été compacté — les règles lues au début ont pu disparaître. L’essentiel, garde-le en vue :',
     ownHead: 'Règles du propriétaire (« Mes règles » dans AGENTS.md) :',
-    startTail: (ws) => `Règles complètes et règles du dossier de travail : ${ws}`,
+    startTail: (ws) => `Règles du dossier de travail en entier : ${ws}`,
   },
   zh: {
-    reminder: '任务简报：需要搜索（网络/电脑）吗？需要主人做什么吗？超过 3 步吗？属于某个项目吗？— 只要有一个「是」：先查这个任务的经验：上面已显示 — 照着做；没显示 — node ~/.maxagent/tools/experience-engine.js find "<任务关键词>"；属于项目的，还要看 projects.md 和项目卡片。不要从头来。用一句话说明：「按经验做：<文件>」/「先查一下经验」/「新任务，还没有经验 — 发现新东西就记下来」。只记录新知识（需要查明的、有东西失败了、主人的规则、可重复的方法），不看步骤多少。',
     projectHead: '[项目] 看起来是项目工作 — 卡片和当前任务：',
     stop: (did) => `[maxagent，经验] 本轮：${did}，但经验（experience/）没有变化。经验是无需搜索、不会出错的可重复操作。如果本轮需要搜索、有东西失败了、主人给了规则，或者得到了一个会重复使用的方法 — 按 experience/_spec.md 在 experience/<类别>/<事物>.md 写一个原子（样例 — experience/_template.md；已有这样的原子就修改它）：\n### <用请求原话描述的任务>\n- когда: <请求> · <命令/工具> · <错误文本>\n- вещь: <对象> · <对象>\n1. <步骤，命令>\n- проверка: <应该得到什么>\n- ловушка: 不要<这样> — <原因>\n- источник: 自己的经验，<日期>\n检查：node ~/.maxagent/tools/experience-engine.js lint <文件> → 没有错误；find "<请求关键词>" → 原子排在最前。然后 commit。没有可记录的 — 用一行说明原因并结束。这个钩子不会第二次拦你。`,
     lintBad: (file, list) => `[maxagent，经验] ${file} 不符合原子格式（experience/_spec.md）— 现在就修正，否则很难被找到，commit 也通不过：\n${list}`,
@@ -197,7 +190,7 @@ const TXT = {
     recallHeads: { sure: '[经验 — 好像我做过这个；核对是否适用]', maybe: '[经验 — 可能有类似的；核对是否适用]', also: '其他类似：', only: '[经验 — 类似的情况]',
       shared: (p, v) => `[他人的经验 — 在这里未经验证；经验包「${p}」${v ? `，v${v}` : ''}]`, adopt: (id) => `如果有用 — 存为自己的：node ~/.maxagent/tools/experience-packs.js adopt "${id}"` },
     updateAvail: (cur, v) => `[maxagent] 已发布 ${v} 版（你的是 ${cur || '?'}）。向主人提议更新，在主人说「是」之后运行：npx --yes maxagent@latest update — 更新内容由该命令自己显示。`,
-    autoUpdated: (v) => `[maxagent] 已更新到 ${v}（修复会自动安装，设置项 autoUpdate）。`,
+    autoUpdated: (v, file) => `[maxagent] 已更新到 ${v}（修复会自动安装，设置项 autoUpdate）。更新内容见 ${file} 的 ${v} 一节：用一两句话转告主人。`,
     news: (text) => `[maxagent，消息] ${text}`,
     adoptAsk: (head, id) => `[经验] 本轮显示了他人的原子「${head}」（共享经验包）。如果它有用且奏效 — 存为自己的：node ~/.maxagent/tools/experience-packs.js adopt "${id}"，必要时修改路径并检查 lint。没用 — 什么都不做，结束即可。这个钩子不会第二次拦你。`,
     did: { research: '网络搜索/阅读', shell: '命令', edits: '检查后的代码修改' },
@@ -214,10 +207,9 @@ const TXT = {
     startHead: '[maxagent] 核心规则 — 整个会话都要记在心里：',
     compactHead: '[maxagent] 上下文已压缩 — 开头读过的规则可能丢了。要点如下，记在心里：',
     ownHead: '主人的规则（AGENTS.md 中的「我的规则」）：',
-    startTail: (ws) => `完整规则和工作文件夹规则：${ws}`,
+    startTail: (ws) => `工作文件夹规则全文：${ws}`,
   },
   ja: {
-    reminder: 'ブリーフィング: 検索が必要（ネット/PC）？ オーナーに何か頼む必要がある？ 3 ステップより多い？ プロジェクトに関係する？ — 1 つでも「はい」なら、まずこのタスクの経験: 上に表示されていればそのとおりに、表示されていなければ node ~/.maxagent/tools/experience-engine.js find "<タスクの言葉>"。プロジェクトなら projects.md とそのカードも。ゼロから始めない。ひと言で伝える:「経験どおりに進めます: <ファイル>」/「まず経験を確認します」/「新しいタスクで経験はまだありません — 新しくわかったことは記録します」。記録するのは新しい知識だけ（調べる必要があった、何かが失敗した、オーナーのルール、繰り返し使える方法）。ステップの数では決めない。',
     projectHead: '[プロジェクト] プロジェクトの作業のようです — カードと進行中のタスク:',
     stop: (did) => `[maxagent、経験] このターン: ${did}。しかし経験（experience/）は変わっていません。経験とは、検索もミスもなく繰り返せる行動です。このターンで検索が必要だった、何かが失敗した、オーナーがルールを示した、繰り返し使う方法ができた — なら experience/_spec.md に従って experience/<種類>/<対象>.md にアトムを書いてください（見本 — experience/_template.md。同じアトムがあれば直す）:\n### <依頼の言葉で書いたタスク>\n- когда: <依頼> · <コマンド/ツール> · <エラーの文>\n- вещь: <対象> · <対象>\n1. <手順、コマンド>\n- проверка: <得られるべき結果>\n- ловушка: <こう>しない — <理由>\n- источник: 自分の経験、<日付>\n確認: node ~/.maxagent/tools/experience-engine.js lint <ファイル> → エラーなし。find "<依頼の言葉>" → アトムが一番上。その後 commit。記録することがなければ、理由を 1 行で述べて終了。このフックが止めるのは 1 回だけです。`,
     lintBad: (file, list) => `[maxagent、経験] ${file} はアトムの形式（experience/_spec.md）になっていません — 今すぐ直してください。直さないと見つけにくく、commit も通りません:\n${list}`,
@@ -225,7 +217,7 @@ const TXT = {
     recallHeads: { sure: '[経験 — 以前やったことがあるようです。合っているか確認]', maybe: '[経験 — 似たものかもしれません。合っているか確認]', also: 'ほかに似たもの:', only: '[経験 — 似たケース]',
       shared: (p, v) => `[他人の経験 — ここでは未確認。パック「${p}」${v ? `、v${v}` : ''}]`, adopt: (id) => `役に立ったら自分のものとして保存: node ~/.maxagent/tools/experience-packs.js adopt "${id}"` },
     updateAvail: (cur, v) => `[maxagent] バージョン ${v} が出ました（現在 ${cur || '?'}）。オーナーに更新を提案し、「はい」の後に実行: npx --yes maxagent@latest update — 新機能はコマンド自体が表示します。`,
-    autoUpdated: (v) => `[maxagent] ${v} に更新しました（修正は自動でインストールされます。設定 autoUpdate）。`,
+    autoUpdated: (v, file) => `[maxagent] ${v} に更新しました（修正は自動でインストールされます。設定 autoUpdate）。新着情報は ${file} の ${v} の節: 一、二文でオーナーに伝えてください。`,
     news: (text) => `[maxagent、お知らせ] ${text}`,
     adoptAsk: (head, id) => `[経験] このターンで他人のアトム「${head}」（共有パック）が表示されました。役に立って動いたなら自分のものとして保存: node ~/.maxagent/tools/experience-packs.js adopt "${id}"。必要ならパスを直し、lint を確認。役に立たなければ何もせず終了。このフックが止めるのは 1 回だけです。`,
     did: { research: 'ネットでの検索・閲覧', shell: 'コマンド', edits: '確認後のコード修正' },
@@ -242,10 +234,9 @@ const TXT = {
     startHead: '[maxagent] 主要ルール — セッションの間ずっと意識しておくこと:',
     compactHead: '[maxagent] コンテキストが圧縮されました — 最初に読んだルールが抜けているかもしれません。要点は以下、意識しておくこと:',
     ownHead: 'オーナーのルール（AGENTS.md の「自分のルール」）:',
-    startTail: (ws) => `完全なルールと作業フォルダのルール: ${ws}`,
+    startTail: (ws) => `作業フォルダのルール全文: ${ws}`,
   },
   ko: {
-    reminder: '브리핑: 검색이 필요한가 (인터넷/컴퓨터)? 주인에게서 뭔가 필요한가? 3단계보다 많은가? 프로젝트와 관련 있는가? — 하나라도 "예"라면 먼저 이 작업의 경험: 위에 나왔으면 그대로 하고, 안 나왔으면 node ~/.maxagent/tools/experience-engine.js find "<작업 단어>"; 프로젝트라면 projects.md와 그 카드도. 처음부터 하지 말 것. 한 문장으로 말하기: "경험대로 합니다: <파일>" / "먼저 경험을 확인합니다" / "새 작업이라 경험이 없습니다 — 새로 알게 되면 기록하겠습니다". 기록은 새로운 지식만 (알아봐야 했던 것, 실패한 것, 주인의 규칙, 반복될 방법) — 단계 수 때문이 아님.',
     projectHead: '[프로젝트] 프로젝트 작업으로 보입니다 — 카드와 진행 중인 작업:',
     stop: (did) => `[maxagent, 경험] 이번 턴: ${did}, 그런데 경험(experience/)은 바뀌지 않았습니다. 경험이란 검색도 실수도 없이 반복할 수 있는 행동입니다. 이번 턴에 검색이 필요했거나, 뭔가 실패했거나, 주인이 규칙을 줬거나, 반복될 방법이 나왔다면 — experience/_spec.md에 따라 experience/<종류>/<대상>.md에 아톰을 쓰세요 (예시 — experience/_template.md; 같은 아톰이 이미 있으면 고치기):\n### <요청한 말 그대로의 작업>\n- когда: <요청> · <명령/도구> · <오류 문구>\n- вещь: <대상> · <대상>\n1. <단계, 명령>\n- проверка: <나와야 할 결과>\n- ловушка: <이렇게> 하지 말 것 — <이유>\n- источник: 직접 경험, <날짜>\n확인: node ~/.maxagent/tools/experience-engine.js lint <파일> → 오류 없음; find "<요청 단어>" → 아톰이 맨 위. 그다음 commit. 기록할 것이 없으면 이유를 한 줄로 말하고 마치세요. 이 훅은 두 번 막지 않습니다.`,
     lintBad: (file, list) => `[maxagent, 경험] ${file}이(가) 아톰 형식(experience/_spec.md)에 맞지 않습니다 — 지금 고치세요. 아니면 잘 찾아지지 않고 commit도 통과하지 못합니다:\n${list}`,
@@ -253,7 +244,7 @@ const TXT = {
     recallHeads: { sure: '[경험 — 전에 해 본 것 같습니다; 맞는지 확인]', maybe: '[경험 — 비슷한 것일 수 있습니다; 맞는지 확인]', also: '그 밖에 비슷한 것:', only: '[경험 — 비슷한 사례]',
       shared: (p, v) => `[다른 사람의 경험 — 여기서 확인되지 않음; 팩 "${p}"${v ? `, v${v}` : ''}]`, adopt: (id) => `도움이 되면 내 것으로 저장: node ~/.maxagent/tools/experience-packs.js adopt "${id}"` },
     updateAvail: (cur, v) => `[maxagent] ${v} 버전이 나왔습니다 (현재 ${cur || '?'}). 주인에게 업데이트를 제안하고, "예"라고 하면 실행: npx --yes maxagent@latest update — 새로운 내용은 명령이 직접 보여 줍니다.`,
-    autoUpdated: (v) => `[maxagent] ${v}(으)로 업데이트됨 (수정 사항은 자동 설치, 설정 autoUpdate).`,
+    autoUpdated: (v, file) => `[maxagent] ${v}(으)로 업데이트됨 (수정 사항은 자동 설치, 설정 autoUpdate). 새 소식 — ${file}, ${v} 섹션: 주인에게 한두 문장으로 전해 주세요.`,
     news: (text) => `[maxagent, 소식] ${text}`,
     adoptAsk: (head, id) => `[경험] 이번 턴에 다른 사람의 아톰 "${head}" (공유 팩)이 표시되었습니다. 도움이 되고 작동했다면 내 것으로 저장: node ~/.maxagent/tools/experience-packs.js adopt "${id}", 필요하면 경로를 고치고 lint를 확인하세요. 도움이 안 됐다면 아무것도 하지 말고 마치세요. 이 훅은 두 번 막지 않습니다.`,
     did: { research: '인터넷 검색/읽기', shell: '명령', edits: '확인 후 코드 수정' },
@@ -270,10 +261,9 @@ const TXT = {
     startHead: '[maxagent] 핵심 규칙 — 세션 내내 눈앞에 두세요:',
     compactHead: '[maxagent] 컨텍스트가 압축되었습니다 — 처음에 읽은 규칙이 빠졌을 수 있습니다. 핵심은 아래, 눈앞에 두세요:',
     ownHead: '주인의 규칙 (AGENTS.md의 "내 규칙"):',
-    startTail: (ws) => `전체 규칙과 작업 폴더 규칙: ${ws}`,
+    startTail: (ws) => `작업 폴더 규칙 전체: ${ws}`,
   },
   hi: {
-    reminder: 'ब्रीफ़िंग: खोज चाहिए (इंटरनेट/कंप्यूटर)? मालिक से कुछ चाहिए? 3 से ज़्यादा कदम? किसी प्रोजेक्ट से जुड़ा है? — एक भी "हाँ" हो तो पहले इस काम का अनुभव: ऊपर दिखा — उसी तरह करो; नहीं दिखा — node ~/.maxagent/tools/experience-engine.js find "<काम के शब्द>"; प्रोजेक्ट हो तो projects.md और उसका कार्ड भी। शून्य से नहीं। एक वाक्य में बताओ: "अनुभव के अनुसार कर रहा हूँ: <फ़ाइल>" / "पहले अनुभव देख लेता हूँ" / "नया काम, अनुभव नहीं है — कुछ नया पता चला तो दर्ज करूँगा"। दर्ज करो सिर्फ़ नया ज्ञान (पता लगाना पड़ा, कुछ विफल हुआ, मालिक का नियम, दोहराने लायक तरीका), कदमों की गिनती की वजह से नहीं।',
     projectHead: '[प्रोजेक्ट] लगता है प्रोजेक्ट का काम है — कार्ड और चालू काम:',
     stop: (did) => `[maxagent, अनुभव] इस बारी में: ${did}, लेकिन अनुभव (experience/) नहीं बदला। अनुभव वह दोहराने लायक काम है जिसमें न खोज लगे न गलती हो। अगर इस बारी में खोजना पड़ा, कुछ विफल हुआ, मालिक ने नियम दिया या कोई ऐसा तरीका निकला जो दोहराया जाएगा — experience/_spec.md के अनुसार experience/<प्रकार>/<चीज़>.md में एक एटम लिखो (नमूना — experience/_template.md; ऐसा एटम पहले से हो तो उसे सुधारो):\n### <अनुरोध के शब्दों में काम>\n- когда: <अनुरोध> · <कमांड/टूल> · <त्रुटि का पाठ>\n- вещь: <चीज़> · <चीज़>\n1. <कदम, कमांड>\n- проверка: <क्या मिलना चाहिए>\n- ловушка: <ऐसे> नहीं — <क्यों>\n- источник: अपना अनुभव, <तारीख>\nजाँचो: node ~/.maxagent/tools/experience-engine.js lint <फ़ाइल> → कोई त्रुटि नहीं; find "<अनुरोध के शब्द>" → एटम सबसे ऊपर। फिर commit। दर्ज करने को कुछ नहीं — एक पंक्ति में वजह बताओ और खत्म करो। यह हुक दूसरी बार नहीं रोकेगा।`,
     lintBad: (file, list) => `[maxagent, अनुभव] ${file} एटम के प्रारूप (experience/_spec.md) में नहीं है — अभी ठीक करो, वरना यह ठीक से नहीं मिलेगा और commit पास नहीं होगा:\n${list}`,
@@ -281,7 +271,7 @@ const TXT = {
     recallHeads: { sure: '[अनुभव — लगता है मैं यह पहले कर चुका हूँ; जाँचो कि फ़िट बैठता है]', maybe: '[अनुभव — शायद कुछ मिलता-जुलता; जाँचो कि फ़िट बैठता है]', also: 'और मिलते-जुलते:', only: '[अनुभव — मिलते-जुलते मामले]',
       shared: (p, v) => `[किसी और का अनुभव — यहाँ जाँचा नहीं गया; पैक "${p}"${v ? `, v${v}` : ''}]`, adopt: (id) => `काम आए तो अपना बना लो: node ~/.maxagent/tools/experience-packs.js adopt "${id}"` },
     updateAvail: (cur, v) => `[maxagent] संस्करण ${v} आ गया है (आपके पास ${cur || '?'})। मालिक को अपडेट का सुझाव दो और उनके "हाँ" के बाद चलाओ: npx --yes maxagent@latest update — नया क्या है, कमांड खुद दिखाएगी।`,
-    autoUpdated: (v) => `[maxagent] ${v} पर अपडेट हुआ (सुधार अपने आप इंस्टॉल होते हैं, सेटिंग autoUpdate)।`,
+    autoUpdated: (v, file) => `[maxagent] ${v} पर अपडेट हुआ (सुधार अपने आप इंस्टॉल होते हैं, सेटिंग autoUpdate)। नया क्या है — ${file}, ${v} अनुभाग: मालिक को एक-दो वाक्यों में बताएँ।`,
     news: (text) => `[maxagent, खबर] ${text}`,
     adoptAsk: (head, id) => `[अनुभव] इस बारी में किसी और का एटम "${head}" (साझा पैक) दिखाया गया। अगर काम आया और चला — अपना बना लो: node ~/.maxagent/tools/experience-packs.js adopt "${id}", ज़रूरत हो तो पाथ ठीक करो और lint जाँचो। काम नहीं आया — कुछ मत करो और खत्म करो। यह हुक दूसरी बार नहीं रोकेगा।`,
     did: { research: 'इंटरनेट पर खोज/पढ़ना', shell: 'कमांड', edits: 'जाँच के बाद कोड में सुधार' },
@@ -298,7 +288,7 @@ const TXT = {
     startHead: '[maxagent] मुख्य नियम — पूरे सत्र में इन्हें ध्यान में रखो:',
     compactHead: '[maxagent] संदर्भ संक्षिप्त कर दिया गया — शुरुआत में पढ़े नियम छूट गए हो सकते हैं। ज़रूरी बातें नीचे हैं, ध्यान में रखो:',
     ownHead: 'मालिक के नियम (AGENTS.md में "मेरे नियम"):',
-    startTail: (ws) => `पूरे नियम और कार्य फ़ोल्डर के नियम: ${ws}`,
+    startTail: (ws) => `कार्य फ़ोल्डर के नियम पूरे: ${ws}`,
   },
 };
 
@@ -340,7 +330,7 @@ function hint(prompt, session, qvec = null) {
   if (SAVE_RE.test(prompt) && !SAVE_TARGET.test(prompt)) lines.push(L.inboxSave(projects.length ? `projects/${projects[0].file.split('/')[1]}/inbox/ (${projects[0].name}) / ` : ''));
   // The answer format is a rule for every answer, not task experience: shown every time, not searched (08.11.2026).
   if (CFG.answerFormat !== false) lines.push(tx('answerRule'));
-  lines.push(L.reminder);
+  // Брифинг из четырёх вопросов снят в 0.6.0: опыт всплывает сам атомами.
   return lines;
 }
 
@@ -565,7 +555,7 @@ const sessionOf = (input) => String(input.session_id || input.conversationId || 
 const ledgerFile = (session) => path.join(ROOT, 'state', `turn-${session.replace(/[^\w.-]/g, '_')}.json`);
 const saveLedger = (session, led) => { try { fs.mkdirSync(path.join(ROOT, 'state'), { recursive: true }); fs.writeFileSync(ledgerFile(session), JSON.stringify(led)); } catch { /* state is a convenience */ } };
 
-/** The previous turn did research or rework, never recorded experience and was never told so → that reminder. */
+/** The previous turn did research or rework, never recorded experience and was never told so → that nudge. */
 function ledgerMissed(led) {
   if (!led || led.wrote || led.asked || !(led.research > 0 || led.rework > 0) || !CFG.workspace) return '';
   return expChangedSince(led.t0) ? '' : L.stop(didText(led.research, led.rework));
@@ -573,7 +563,7 @@ function ledgerMissed(led) {
 
 /**
  * A new owner's message: a new ledger. The same message again is the same turn (OpenClaw and Hermes call this before
- * every model call). Returns the reminder for a previous turn that ended unrecorded where no end-of-turn check ran
+ * every model call). Returns the nudge for a previous turn that ended unrecorded where no end-of-turn check ran
  * (Hermes has no end-of-turn event outside code edits).
  */
 function ledgerStart(input, message) {
@@ -843,7 +833,18 @@ function coreRules() {
   return { rules: rules.split(/\r?\n/).slice(0, 40).join('\n'), own: own.split(/\r?\n/).slice(0, 30).join('\n') };
 }
 
+/** After compaction the chat no longer holds the atoms shown earlier, but the session id stays the same:
+ *  forget what this session was shown, so the atoms can surface again. */
+function forgetShown(session) {
+  if (!ENG || !session) return;
+  const id = String(session).replace(/[^\w.-]/g, '_');
+  for (const kind of ['recall', 'action', 'answer']) {
+    try { fs.unlinkSync(path.join(ENG.stateDir(), `${kind}-shown-${id}.json`)); } catch { /* nothing shown yet */ }
+  }
+}
+
 function sessionStart(input) {
+  if (input.source === 'compact') forgetShown(input.session_id);
   const r = CFG.workspace ? coreRules() : null;
   if (!r) return '';
   const lines = [input.source === 'compact' ? L.compactHead : L.startHead];
@@ -885,7 +886,7 @@ function updateLines() {
   const shown = readJson(shownFile, { news: [] });
   const latest = st.latest && st.latest.maxagent;
   if (st.autoUpdated && shown.autoUpdated !== st.autoUpdated) {
-    out.push(L.autoUpdated(st.autoUpdated)); // once per update, not every session
+    out.push(L.autoUpdated(st.autoUpdated, path.join(ROOT, 'core', CFG.lang || 'en', 'changes.md'))); // once per update, not every session
     shown.autoUpdated = st.autoUpdated;
   } else if (latest && !st.autoUpdated && verNewer(latest, CFG.version) && (shown.version !== latest || Date.now() - (shown.at || 0) > 24 * 3600 * 1000)) {
     out.push(L.updateAvail(CFG.version, latest));
@@ -944,9 +945,10 @@ function agUserTurn(input) {
   let lines = [];
   try { lines = fs.readFileSync(file, 'utf8').split('\n'); } catch { return ''; }
   let last = null;
-  for (const l of lines) {
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const l = lines[i];
     if (!l.includes('"USER_INPUT"')) continue;
-    try { const o = JSON.parse(l); if (o.type === 'USER_INPUT') last = o; } catch { /* partial line */ }
+    try { const o = JSON.parse(l); if (o.type === 'USER_INPUT') { last = o; break; } } catch { /* partial line */ }
   }
   if (!last) return '';
   const mark = path.join(ROOT, 'state', `ag-turn-${id.replace(/[^\w.-]/g, '_') || 'x'}.json`);
@@ -959,7 +961,10 @@ function agTranscript(input) {
   const id = String(input.conversationId || '');
   const home = process.env.USERPROFILE || process.env.HOME || '';
   const file = input.transcriptPath || (id && path.join(home, '.gemini', 'antigravity', 'brain', id, '.system_generated', 'logs', 'transcript.jsonl'));
-  try { return fs.readFileSync(file, 'utf8').split('\n'); } catch { return []; }
+  try {
+    const lines = fs.readFileSync(file, 'utf8').split('\n');
+    return lines.slice(-100);
+  } catch { return []; }
 }
 
 /** Antigravity: the final answer of this turn = the last PLANNER_RESPONSE with text and no tool calls after the last USER_INPUT. */
@@ -1011,7 +1016,7 @@ function run(raw) {
     const rules = input.invocationNum === 0 ? sessionStart({}) : '';
     const vec = user && ENG && ENG.queryVector ? ENG.queryVector(user) : Promise.resolve(null);
     return vec.then((qvec) => {
-      const lines = [...(user ? hint(user, session, qvec) : [L.reminder]), ...memories, ...(missed ? [missed] : [])];
+      const lines = [...(user ? hint(user, session, qvec) : []), ...memories, ...(missed ? [missed] : [])];
       return JSON.stringify({ injectSteps: [{ ephemeralMessage: (rules ? rules + '\n' : '') + lines.join('\n') }] });
     });
   }
@@ -1059,7 +1064,6 @@ function run(raw) {
 function neutral() {
   if (EVENT === 'pretool' && AGENT === 'antigravity') return JSON.stringify({ decision: 'allow' });
   if (EVENT === 'invocation' || (EVENT === 'stop' && AGENT === 'antigravity')) return '{}';
-  if (EVENT === 'prompt') return L.reminder + '\n';
   return '';
 }
 

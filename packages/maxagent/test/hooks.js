@@ -86,8 +86,20 @@ fs.appendFileSync(path.join(ws, 'AGENTS.md'), '- Никогда не покуп�
 let out = hook('claude-code', 'start', { source: 'startup' });
 check(/Главные правила/.test(out) && /Не говорю «готово»/.test(out) && /Никогда не покупай без суммы/.test(out) && !/<!--/.test(out), 'start: core rules + owner rules, no markers', out);
 check(!/кодов/i.test(out), 'start: no code word anywhere');
+check(/Правила рабочей папки целиком/.test(out) && !/регламент/i.test(out), 'start: tail says workspace rules in full, no "регламент"', out.slice(-400));
+check(!/Отвечаю хозяину на языке/.test(out) && !/Что хозяину \*\*глянуть\*\*/.test(out), 'start: core rules have no language and answer-format items');
 check(!/личные правила для агентов/.test(out), 'start: template explanation is not shown as an owner rule');
 check(/Память сжата/.test(hook('claude-code', 'start', { source: 'compact' })), 'start after compaction: says memory was compacted');
+{
+  const st = path.join(home, '.maxagent', 'state');
+  fs.mkdirSync(st, { recursive: true });
+  for (const k of ['recall', 'action', 'answer']) fs.writeFileSync(path.join(st, `${k}-shown-cmp1.json`), '["x.md#y"]');
+  fs.writeFileSync(path.join(st, 'recall-shown-other.json'), '["x.md#y"]');
+  hook('claude-code', 'start', { source: 'startup', session_id: 'cmp1' });
+  check(fs.existsSync(path.join(st, 'recall-shown-cmp1.json')), 'start (not compaction): shown atoms kept');
+  hook('claude-code', 'start', { source: 'compact', session_id: 'cmp1' });
+  check(['recall', 'action', 'answer'].every((k) => !fs.existsSync(path.join(st, `${k}-shown-cmp1.json`))) && fs.existsSync(path.join(st, 'recall-shown-other.json')), 'after compaction: this session forgets shown atoms, other sessions keep theirs');
+}
 const bom = spawnSync(process.execPath, [hookJs, 'claude-code', 'start'], { encoding: 'utf8', input: '﻿{"source":"startup"}' });
 check(/Главные правила/.test(bom.stdout), 'start: input with a BOM (PowerShell 5.1 pipe) still works');
 check(/Главные правила/.test(hook('codex', 'start', { source: 'startup' })), 'Codex start: core rules');
@@ -112,7 +124,7 @@ atomFile('npm.md', 'npm — свой пакет', 'npm, пакет, публик
 fs.appendFileSync(path.join(ws, 'projects.md'), '| Сайт-магазин | [projects/shop](projects/shop/README.md) | вёрстка каталога | 2026-11-05 |\n');
 out = hook('claude-code', 'prompt', { session_id: 's1', prompt: 'опубликуй пакет в npm' });
 check(out.includes('experience/npm.md') && !/подтвержд|кодов/.test(out), 'prompt: hint found, nothing about confirmation', out);
-check(out.includes('Брифинг:') && out.includes('больше 3 шагов'), 'prompt: briefing questions in every reminder');
+check(!out.includes('Брифинг') && /Ответ хозяину/.test(out), 'prompt: no briefing (removed 12.11.2026), answer rule stays', out);
 out = hook('claude-code', 'prompt', { session_id: 's1', prompt: 'поправь вёрстку на сайте-магазине' });
 check(out.includes('projects/shop/README.md'), 'prompt: project from the registry suggested', out);
 check(!hook('claude-code', 'prompt', { session_id: 's1', prompt: 'привет' }).includes('[проект]'), 'prompt: no project for small talk');
@@ -321,6 +333,10 @@ out = hook('claude-code', 'start', { source: 'startup' });
 check(/Вышла версия 99\.0\.0/.test(out) && /npx --yes maxagent@latest update/.test(out) && /Chrome Web Store/.test(out) && !/Only for 98/.test(out), 'start: a newer version and a fitting news item are shown', out.slice(-600));
 out = hook('claude-code', 'start', { source: 'startup' });
 check(!/Вышла версия/.test(out) && !/Chrome Web Store/.test(out), 'start again: the same version and news are not repeated', out.slice(-400));
+fs.writeFileSync(path.join(stDir, 'update.json'), JSON.stringify({ at: Date.now(), latest: { maxagent: '99.0.0' }, autoUpdated: '98.5.0' }));
+try { fs.unlinkSync(path.join(stDir, 'update-shown.json')); } catch { /* first time */ }
+out = hook('claude-code', 'start', { source: 'startup' });
+check(/Обновлено до 98\.5\.0/.test(out) && /changes\.md/.test(out), 'start: after self-update the line points to changes.md', out.slice(-500));
 out = parsed(hook('claude-code', 'posttool', { tool_name: 'mcp__maxagent-bridge__tabs_list', tool_response: [{ type: 'text', text: 'browser_not_connected: …' }] }));
 check(out && /launch_browser/.test(out.hookSpecificOutput.additionalContext), 'posttool: bridge not connected → one recipe');
 check(hook('claude-code', 'posttool', { tool_name: 'mcp__maxagent-bridge__tabs_list', tool_response: [{ type: 'text', text: '[]' }] }) === '', 'posttool: normal answer → silent');
@@ -391,7 +407,7 @@ if(a[0]==='config'&&a[1]==='set'){const f=${JSON.stringify(path.join(oh, '.openc
   check(plugin.id === 'maxagent' && plugin.configSchema.safeParse(undefined).success && !plugin.configSchema.safeParse({ x: 1 }).success, 'OpenClaw plugin: entry shape like definePluginEntry (id, empty config schema)');
   check(handlers.before_prompt_build && handlers.before_tool_call && JSON.stringify(handlers.before_tool_call.opts.matcher) === JSON.stringify(['exec', 'web_search', 'web_fetch', 'browser']), 'OpenClaw plugin: registers before_prompt_build and before_tool_call (exec, web_search, web_fetch, browser)');
   const pb = handlers.before_prompt_build.fn({ prompt: 'привет', messages: [] }, { sessionKey: 'k' });
-  check(/Главные правила/.test(pb.appendSystemContext || '') && /Брифинг/.test(pb.prependContext || ''), 'OpenClaw plugin: core rules → system context, briefing → prompt context', JSON.stringify(pb).slice(0, 300));
+  check(/Главные правила/.test(pb.appendSystemContext || '') && /Ответ хозяину/.test(pb.prependContext || '') && !/Брифинг/.test(pb.prependContext || ''), 'OpenClaw plugin: core rules → system context, answer rule (no briefing) → prompt context', JSON.stringify(pb).slice(0, 300));
   const blocked = handlers.before_tool_call.fn({ toolName: 'exec', params: { command: 'rm -rf ~' } }, { sessionKey: 'k', runId: 'r1' });
   check(blocked && blocked.block === true && /уничтожить/.test(blocked.blockReason), 'OpenClaw plugin: home wipe via exec → blocked', JSON.stringify(blocked));
   check(handlers.before_tool_call.fn({ toolName: 'exec', params: { command: 'ls -la' } }, { sessionKey: 'k', runId: 'r1' }) === undefined, 'OpenClaw plugin: harmless exec → no decision');

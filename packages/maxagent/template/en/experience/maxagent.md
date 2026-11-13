@@ -1,18 +1,11 @@
 ---
 title: maxagent — the shell itself
-task: Questions about the shell: settings, checking the install, update, building the experience index; "introduction shown" notes
+task: Questions about the shell: settings, checking the install, update, building the experience index; tell the owner what maxagent can do
 aliases: maxagent, shell, settings, setup, introduction, core rules, update, doctor, experience index, experience-index
 verified: {{DATE}} — maxagent {{VERSION}} installed
 ---
 
 # Experience about maxagent itself
-
-## Notes
-
-<!-- The agent appends lines like:
-- Introduction shown: 2026-01-01.
-- Summary of what's new in 0.3.0 shown: 2026-02-01.
--->
 
 ## Atoms
 
@@ -33,8 +26,16 @@ verified: {{DATE}} — maxagent {{VERSION}} installed
 - когда: update maxagent · npx maxagent update · new maxagent version
 - вещь: maxagent · update · core rules
 1. `npx maxagent update` — rules, injection base, hooks, core rules.
-2. The workspace is not touched, except the core rules block in `AGENTS.md`.
-3. What's new in the version — show the owner once and put a note above.
+2. The workspace is not touched, except the "Core rules" and "Settings" blocks in `AGENTS.md` and the new template files; in 0.6.0 — once more the line about reading the rules at start (copy — `AGENTS.md.maxagent-backup`).
+3. What's new — `{{CORE}}/changes.md`: retell the owner in a sentence or two.
+- источник: maxagent experience, 2026
+
+### Tell the owner what maxagent can do
+- когда: explain maxagent · what can you do · how do I use this · introduction · show the installation
+- вещь: maxagent · experience · projects · inbox
+1. Briefly, in your own words: experience accumulates as atoms in `experience/` and surfaces by itself for the task; projects — `projects.md` and `projects/<name>/`; "save for later" — into `inbox/`.
+2. What is enabled — the "Settings" section in `AGENTS.md`; change it with `npx maxagent setup`; check the install with `npx maxagent doctor`.
+3. Suggest what can be said: "start a project …", "what do you know about …", "save this for later".
 - источник: maxagent experience, 2026
 
 ### Build the experience.md index

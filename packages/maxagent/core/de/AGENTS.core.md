@@ -1,4 +1,4 @@
-<!-- maxagent core, version {{VERSION}}. Diese Datei gehört zum Paket: `maxagent update` überschreibt sie. Eigene Regeln gehören in AGENTS.md in Ihrem Arbeitsordner. -->
+<!-- maxagent core, version {{VERSION}}. Nachschlagewerk, wie die Dinge funktionieren — wird beim Start nicht gelesen. Diese Datei gehört zum Paket: `maxagent update` überschreibt sie. Eigene Regeln gehören in AGENTS.md in Ihrem Arbeitsordner. -->
 
 # Arbeitsregeln des Agenten (maxagent core)
 
@@ -10,27 +10,16 @@ Das Herz dieses Systems ist die **Erfahrung**. Der Agent löst nie zweimal dasse
 
 ## 1. Beginn jeder Aufgabe
 
-Vor jeder Aufgabe, Antwort oder Untersuchung:
+Dies ist ein Nachschlagewerk, wie die Dinge funktionieren: Es wird beim Start nicht gelesen. Beim Start bekommt der Agent nur Folgendes:
 
-0. Öffne `sync.md`. Gibt es eine offene Abweichung und kannst du sie beheben — behebe sie, markiere sie „erledigt: Datum, wie“ und mach weiter. Kannst du es nicht — arbeite weiter und lass sie stehen.
-1. Lies `AGENTS.md` im Arbeitsordner (bei Widerspruch gehen die Regeln des Besitzers dieser Datei vor). Sein Abschnitt **„Hauptregeln“** ist eine kurze „immer“-Liste: Behalte sie die ganze Sitzung über im Blick (der Hook zeigt sie beim Start und nach dem Komprimieren des Kontexts).
-2. Öffne den Erfahrungsindex `experience.md` und lies nur die passenden Einträge.
-3. Gehört die Aufgabe zu einem Projekt — `projects.md` → `projects/<name>/README.md` → die aktive Aufgabe. Fang nicht bei null an, wenn dort ein Haltepunkt festgehalten ist.
-4. Erster Start nach Installation oder Update — siehe Abschnitt 8.
+1. Die `AGENTS.md` im Arbeitsordner — die maxagent-Zeile in der Regeldatei des Agenten sagt, sie zu lesen. Der Hook zeigt beim Sitzungsstart und nach dem Komprimieren des Kontexts ihre Abschnitte „Hauptregeln“ und „Meine Regeln“. Bei Widerspruch gehen die Regeln des Besitzers dieser Datei vor.
+2. Erfahrung — als Atome passend zur Aufgabe (Unterabschnitt unten). Den Index `experience.md` und den ganzen Ordner `experience/` nicht lesen.
+3. Ein Projekt — nur wenn die Aufgabe dazu gehört: Der Hook verweist auf seine Karte; dann `projects/<name>/README.md` → die aktive Aufgabe.
+4. `sync.md` — beim Synchronisieren oder wenn irgendwo das Speichern fehlschlug (Abschnitt 6).
 
-### Briefing vor jeder Aufgabe
+### Erfahrung taucht von selbst auf
 
-Bei jeder neuen Bitte, nicht nur zu Beginn einer Sitzung, stell vier Fragen:
-1. Ist eine Suche nötig — im Web oder auf dem Rechner?
-2. Braucht es etwas vom Besitzer — eine Handlung, eine Entscheidung, einen Zugang?
-3. Mehr als drei Schritte?
-4. Gehört es zu einem Projekt?
-
-Irgendein „ja“ → **zuerst die Erfahrung zu dieser Aufgabe**: der Index `experience.md`, und bei „ja“ auf Frage 4 auch `projects.md` und die Projektkarte.
-- Erfahrung vorhanden — mach es **so**, nicht von vorn. Erfinde einen funktionierenden Ablauf nicht neu.
-- Keine Erfahrung — neue Aufgabe: Behalte im Kopf, was davon in die Erfahrung gehen kann, und halte es fest, wenn die Schwelle unten erreicht ist. Dieselbe Aufgabe wird nicht jedes Mal anders erledigt.
-
-Das Briefing ist **ein kurzer, umgangssprachlicher Satz** am Anfang der Antwort, nur wenn es irgendein „ja“ gibt: „Ich folge der Erfahrung: <Datei>.“ / „Ich prüfe zuerst die Erfahrung.“ / „Neue Aufgabe, keine Erfahrung — finde ich Neues, halte ich es fest.“ So sieht der Besitzer, dass die Erfahrung nicht vergessen wird.
+Erfahrung kommt als Atome passend zur Aufgabe — bei der Nachricht des Besitzers, vor einem Befehl und nach einem Fehler (Hook). Dann ihr folgen statt von vorn anzufangen; einen funktionierenden Ablauf nicht neu erfinden.
 
 **Schwelle fürs Festhalten — nicht die Zahl der Schritte, sondern neues Wissen.** Halte nur fest, wenn: etwas herausgefunden werden musste (Suche, Dokumentation, fremder Code); etwas nicht funktionierte und anders gemacht werden musste; der Besitzer eine Regel oder Korrektur gab; ein Vorgehen entstand, das sich klar wiederholen wird. Gewöhnliche Schritte auf einem bekannten Weg sind keine Erfahrung, egal wie viele.
 
@@ -38,13 +27,13 @@ Das Briefing ist **ein kurzer, umgangssprachlicher Satz** am Anfang der Antwort,
 
 In einer langen Sitzung vergisst das Modell seine Regeln. Deshalb:
 
-- **Vor jedem nicht trivialen Schritt** — besonders vor einer Websuche, dem Lesen von Dokumentation oder dem Erkunden des Rechners — durchsuche zuerst `experience.md` nach den Schlüsselwörtern des Schritts.
+- **Vor jedem nicht trivialen Schritt** — besonders vor einer Websuche, dem Lesen von Dokumentation oder dem Erkunden des Rechners — zuerst Erfahrung: Ist ein Atom aufgetaucht — folge ihm; ist keins da — `node "{{TOOLS}}/experience-engine.js" find "<Wörter des Schritts>"`.
 - **Alles, was du nachschlagen oder mit Befehlen herausfinden musstest, kommt in die Erfahrung**, bevor die Aufgabe endet. Gibt es nichts festzuhalten — sag bewusst in einer Zeile, warum.
 - Wo der Agent Hooks unterstützt, installiert maxagent sie: einen Erfahrungshinweis bei jeder Nachricht und eine Prüfung „Erfahrung festgehalten?“ am Ende des Zugs. Ein Hook ist eine Erinnerung im Code, kein Ersatz für diese Regel.
 
 ## 3. Wie die Erfahrung aufgebaut ist
 
-Drei Ebenen: **Hauptregeln** (in `AGENTS.md`, etwa zehn „immer“-Punkte) → **Index** (`experience.md`) → **Bibliothek** (`experience/`).
+Drei Ebenen: **Hauptregeln** (in `AGENTS.md`, etwa zehn „immer“-Punkte) → die **Bibliothek** der Atome (`experience/`): Der Hook wählt die Atome für die Anfrage selbst aus, nach Wörtern und nach Bedeutung → der **Index** `experience.md` — ein Inhaltsverzeichnis für Menschen und für die manuelle Suche; beim Start nicht gelesen.
 
 - **Nach Sache, nicht nach Anlass.** Eine Sache — eine Datei: worum es beim Wissen geht (ein Programm, ein Dienst, eine Sprache), nicht wann oder in welchem Projekt es gelernt wurde. Arten: `experience/platform/` — System und Umgebung; `tools/` — Programme und Dienste; `code/` — Sprachen und Bibliotheken; `agents/` — die Agenten selbst; `craft/<Gebiet>/` — die Basis eines Gebiets, gemeinsam für alle seine Projekte; `owner/` — wie der Besitzer gern arbeitet. Projektspezifisches — in `projects/<name>/`.
 - **Ein Eintrag folgt der Vorlage** `experience/_template.md`: ein Kopf (`title`, `task`, `aliases`, `verified`), dann „Aufgaben → Lösungen“ (Befehle zum Kopieren), „Fallen“ (das Symptom in den Worten, mit denen es beschrieben wird → Ursache → was tun → wie prüfen), „Regeln des Besitzers“, „Nicht geprüft“.
@@ -100,11 +89,9 @@ Wenn der Besitzer ein privates Repository eingeschaltet hat:
 - Ändere nie eigenmächtig eine Entscheidung, die der Besitzer gebilligt hat, auch nicht aus technischem Grund — zeig es und frag vorher.
 - Von einem Agenten geschriebene Prüfungen: Alles Wichtige ist ein Fehler (ERROR, Exit-Code ungleich null), keine Warnung — Agenten überspringen Warnungen. „0 Fehler“ heißt nicht „fertig“, wenn die Regeln verlangen, Warnungen zu sichten.
 
-## 8. Einführung beim ersten Start
+## 8. Einführung und Neuigkeiten
 
-Wenn `experience/maxagent.md` keine Notiz „Einführung gezeigt“ hat — zeig dem Besitzer einmal eine kurze Zusammenfassung: wie Erfahrung, Projekte und Synchronisierung funktionieren; was bei der Einrichtung eingeschaltet wurde und wie man es ändert (`npx maxagent setup`); Tipps („sag: starte ein Projekt …“, „sag: was weißt du über …“). Dann halte die Notiz mit Datum fest und zeig es nie wieder.
-
-Nach einem `maxagent update` mit neuen Funktionen — eine Zusammenfassung nur des Neuen aus `{{CORE}}/changes.md` (Versionsabschnitte, die neuer sind als die letzte Notiz), ebenfalls einmal (Notiz mit der Version).
+Es gibt kein eigenes Erststart-Ritual: `npx maxagent init` selbst zeigt, was installiert wurde und wie man es ändert. Fragt der Besitzer, was maxagent ist und wie man es benutzt — das Atom „Dem Besitzer sagen, was maxagent kann“ in `experience/maxagent.md`. Nach einem Update meldet der Hook einmal „Aktualisiert auf X“ und wo die Neuigkeiten stehen (`{{CORE}}/changes.md`, der Abschnitt dieser Version) — erzähl sie dem Besitzer in ein, zwei Sätzen.
 
 ## 9. Schutz vor Injektionen
 
