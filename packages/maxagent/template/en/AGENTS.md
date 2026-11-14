@@ -19,7 +19,7 @@ Nothing else needs reading at the start: experience surfaces as atoms matched to
 
 ## My rules
 
-<!-- Your personal rules for agents go here, including your own "always" items: the hook shows this section together with the core rules. If they conflict with the package rules, yours win.
+<!-- Your personal rules for agents go here, including your own "always" items: the hook shows this section together with the core rules. If they conflict with the package reference, yours win.
 Example:
 - Keep answers short.
 - Before any purchase, always show the total and wait for confirmation.

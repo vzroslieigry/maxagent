@@ -94,10 +94,15 @@ function atom(s, when, t) {
   const label = s.plugin ? `${s.plugin}/${s.name}` : s.name;
   const head = `${s.plugin ? t.plugin : t.skill} ${label} (${s.title}${s.off ? `, ${t.off}` : ''})`;
   const desc = cut(clean(s.description) || label, MAX_DESC);
-  // Own phrases first; the field has a limit, so what does not fit is dropped.
-  const triggers = [...when.split(/\s*·\s*/), `${t.word} ${label}`, cut(clean(s.description.split(/(?<=[.!?])\s/)[0] || ''), 100)].filter(Boolean)
+  // Own phrases first; the field has a limit, so what does not fit is dropped. A part stays only if the engine's lint
+  // (E016) accepts it: several words that boil down to one stem are dropped, a single word stays.
+  const fine = (p) => p.trim().split(/\s+/).length < 2 || new Set(eng.stems(p)).size !== 1;
+  const triggers = [...when.split(/\s*·\s*/), `${t.word} ${label}`, cut(clean(s.description.split(/(?<=[.!?])\s/)[0] || ''), 100)].filter(Boolean).filter(fine)
     .reduce((acc, p) => ([...acc, p].join(' · ').length <= 195 ? [...acc, p] : acc), []).join(' · ');
-  return [`### ${head}`, `- когда: ${triggers}`, `- вещь: ${t.word} · ${s.title} · ${label}`, `1. ${desc}`, `2. ${t.file}: \`${s.file}\`. ${s.off ? t.ask : t.read}`, `- источник: ${t.src}`].join('\n');
+  const build = (d) => [`### ${head}`, `- когда: ${triggers}`, `- вещь: ${t.word} · ${s.title} · ${label}`, `1. ${d}`,`2. ${t.file}: \`${s.file}\`. ${s.off ? t.ask : t.read}`, `- источник: ${t.src}`].join('\n');
+  // The atom must fit eng.MAX_ATOM: the description gives way by the excess.
+  const full = build(desc);
+  return full.length > eng.MAX_ATOM ? build(cut(desc, Math.max(20, desc.length - (full.length - eng.MAX_ATOM) - 1))) : full;
 }
 
 const whenFile = (root) => path.join(root, 'skills', '_when.json');
@@ -116,11 +121,19 @@ function scan(root = eng.libraryRoot()) {
   for (const f of fs.readdirSync(dir)) if (ours.has(f) && !groups[f.slice(0, -3)]) fs.unlinkSync(path.join(dir, f)); // only the files this tool generates
   for (const [agent, list] of Object.entries(groups)) {
     list.sort((a, b) => a.key.localeCompare(b.key));
-    const atoms = list.map((s) => atom(s, when[s.key] ? clean(when[s.key].replace(/·/g, '\u0001')).replace(/\u0001/g, '·') : '', t));
-    n += atoms.length;
+    let atoms = list.map((s) => atom(s, when[s.key] ? clean(when[s.key].replace(/·/g, '\u0001')).replace(/\u0001/g, '·') : '', t));
     const head = `---\ntitle: ${t.title} — ${list[0].title}\naliases: ${t.word}, skill, SKILL.md, ${list[0].title}\n---\n\n`;
-    const body = `${head}${atoms.join('\n\n')}\n`;
+    // A broken atom is not written: the shelf must pass the package's own lint.
+    const wrap = (a) => `${head}${a.join('\n\n')}\n`;
+    const bad = eng.lint(wrap(atoms)).map((e) => e.line);
+    if (bad.length) {
+      let line = head.split('\n').length;
+      atoms = atoms.filter((a) => { const from = line; line += a.split('\n').length + 1; return !bad.some((b) => b >= from && b < line); });
+    }
+    n += atoms.length;
     const file = path.join(dir, `${agent}.md`);
+    if (!atoms.length) { if (fs.existsSync(file)) fs.unlinkSync(file); continue; }
+    const body = wrap(atoms);
     if (!fs.existsSync(file) || fs.readFileSync(file, 'utf8') !== body) fs.writeFileSync(file, body);
   }
   return n;

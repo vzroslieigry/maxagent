@@ -377,5 +377,39 @@ for (const lang of ['ru', 'en']) {
   }
 }
 
+/* ---------- the skills shelf passes the package's own lint; update does not claim "untouched" ---------- */
+{
+  const eng = require('../tools/experience-engine.js');
+  for (const lang of ['ru', 'en']) {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), `maxagent-shelf-${lang}-`));
+    const plug = fs.mkdtempSync(path.join(os.tmpdir(), `maxagent-plugins-${lang}-`));
+    fs.mkdirSync(path.join(home, '.claude'));
+    // A fake plugin home: s1 — the first phrase boils down to one stem ("OEE with…"), s2 — a long name and description.
+    const skills = path.join(plug, '.claude', 'plugins', 'marketplaces', 'm', 'plugins', 'pluginpluginpluginpluginpluginpluginplug', 'skills');
+    fs.mkdirSync(path.join(skills, 's1'), { recursive: true });
+    fs.mkdirSync(path.join(skills, 's2'), { recursive: true });
+    fs.writeFileSync(path.join(skills, 's1', 'SKILL.md'), `---\nname: s1\ndescription: OEE with ${'x'.repeat(95)}rest. Tracks equipment effectiveness for plants.\n---\nbody\n`);
+    const long = 'Handles quarterly financial reconciliation across ledgers and subsidiaries with careful validation. Produces detailed variance reports for every cost center and highlights anomalies automatically. Integrates with spreadsheets, exports summaries to presentations, and keeps an audit trail of every adjustment made. Supports multiple currencies, rounding policies, intercompany eliminations, and tax adjustments for regional offices. Use it whenever the user mentions closing the books, month end, accruals, or consolidation workflows in any department.';
+    fs.writeFileSync(path.join(skills, 's2', 'SKILL.md'), `---\nname: ${'abcdefghijklmnopqrstuvwxyzabcdefghijklmn'}\ndescription: ${long}\n---\nbody\n`);
+    run('init', '--yes', '--lang', lang, '--home', home, '--workspace', path.join(home, 'maxagent'), '--agents', 'claude-code', '--no-bridge', '--desktop', '0', '--no-auto-update');
+    const root = path.join(home, 'maxagent', 'experience');
+    const env = { ...process.env, MAXAGENT_SKILLS_HOME: plug };
+    const sc = spawnSync(process.execPath, [path.join(home, '.maxagent', 'tools', 'experience-skills.js'), 'scan'], { encoding: 'utf8', env });
+    check(sc.status === 0, `${lang}: skills shelf: scan exit 0`, sc.stderr);
+    const lint = spawnSync(process.execPath, [path.join(home, '.maxagent', 'tools', 'experience-engine.js'), 'lint', '--all', '--root', root], { encoding: 'utf8', env });
+    check(lint.status === 0 && /ошибок нет/.test(lint.stdout), `${lang}: skills shelf: lint --all without errors`, lint.stdout.slice(-500));
+    const shelf = read(path.join(root, 'skills', 'claude-plugins.md'));
+    const a1 = shelf.split(/\n(?=### )/).find((x) => /\/s1 /.test(x.split('\n')[0]));
+    check(!!a1, `${lang}: skills shelf: the atom s1 is there`);
+    const parts = ((a1 || '').match(/^- когда: (.*)$/m) || [, ''])[1].split(/\s+·\s+/);
+    check(parts.length > 0 && parts.every((p) => p.trim().split(/\s+/).length < 2 || new Set(eng.stems(p)).size > 1), `${lang}: skills shelf: no part of "когда" boils down to one stem`, parts.join(' | '));
+    check(shelf.split(/\n(?=### )/).every((x) => x.length <= eng.MAX_ATOM), `${lang}: skills shelf: no atom longer than ${eng.MAX_ATOM}`);
+    const up = run('update', '--home', home);
+    check(up.status === 0 && !/не тронута|untouched/.test(up.stdout), `${lang}: update does not claim the workspace is untouched`, up.stdout.slice(0, 400));
+    fs.rmSync(home, { recursive: true, force: true }); // throwaway home created above
+    fs.rmSync(plug, { recursive: true, force: true }); // throwaway plugin home created above
+  }
+}
+
 console.log(failed ? `\n${failed} FAILED` : '\nALL OK');
 process.exit(failed ? 1 : 0);
